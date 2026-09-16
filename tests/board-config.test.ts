@@ -22,7 +22,7 @@ const realWorldView = {
 	newCardsToTop: true,
 	collapsedColumns: { "(No value)": true },
 	boardColumns: ["", new Date("2026-09-12"), new Date("2026-09-13")],
-	tagColors: { "quinto-andar": "#3d64ff", task: "#c4c4c4" },
+	tagColors: { project: "#3d64ff", task: "#c4c4c4" },
 };
 
 describe("readBoardConfig", () => {
@@ -34,7 +34,7 @@ describe("readBoardConfig", () => {
 		expect(config.cardOpenBehavior).toBe("modal");
 		expect(config.newCardsToTop).toBe(true);
 		expect(config.collapsedColumns.has("(No value)")).toBe(true);
-		expect(config.tagColors.get("quinto-andar")).toBe("#3d64ff");
+		expect(config.tagColors.get("project")).toBe("#3d64ff");
 	});
 
 	it("normalises YAML dates in boardColumns back to plain strings", () => {
