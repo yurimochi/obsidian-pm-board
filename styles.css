@@ -59,4 +59,52 @@
 
 .pmb-card-title {
 	font-size: var(--font-ui-small);
+	font-weight: var(--font-medium);
+}
+
+.pmb-card-tags,
+.pmb-card-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-2);
+	margin-top: var(--size-2-3);
+}
+
+.pmb-tag,
+.pmb-chip {
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.4;
+	padding: 0 var(--size-2-2);
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pmb-tag {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-muted);
+}
+
+.pmb-tag-colored {
+	background-color: var(--pmb-tag-color);
+}
+
+/* Chosen per tag by contrast against its own colour, not by the app theme. */
+.pmb-tag-on-light {
+	color: #fff;
+}
+
+.pmb-tag-on-dark {
+	color: #000;
+}
+
+.pmb-chip {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-muted);
+}
+
+.pmb-chip:empty {
+	display: none;
 }
