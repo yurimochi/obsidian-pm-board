@@ -123,7 +123,7 @@
 }
 
 .pmb-column-toggle:hover {
-	background-color: var(--background-primary);
+	background-color: var(--background-modifier-active-hover);
 }
 
 .pmb-column-chevron {
@@ -172,7 +172,7 @@
 
 .pmb-column-add:hover,
 .pmb-column-menu:hover {
-	background-color: var(--background-primary);
+	background-color: var(--background-modifier-active-hover);
 }
 
 .pmb-lane-columns-drop-target {
