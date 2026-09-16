@@ -26,10 +26,10 @@ import { coerceGroupValue, frontmatterKeyOf } from "./frontmatter";
 import { resolveOpenTarget } from "./open-behavior";
 import {
 	adjustIndexForRemoval,
-	compareOrderKeys,
 	insertionIndexAt,
 	planInsertion,
 	resolveOrderKey,
+	sortByOrderKey,
 } from "./order";
 
 export class BoardView extends BasesView {
@@ -94,14 +94,18 @@ export class BoardView extends BasesView {
 
 		if (collapsed) return;
 
+		const ordered = sortByOrderKey(group.entries, (entry) =>
+			this.orderKeyOf(entry, config.orderProperty),
+		);
+
 		const cardsEl = columnEl.createDiv({ cls: "pmb-cards" });
-		for (const entry of this.orderedEntries(group, config.orderProperty)) {
+		for (const entry of ordered) {
 			this.renderDraggableCard(cardsEl, entry, config, properties);
 		}
-		this.registerDropTarget(cardsEl, key);
+		this.registerDropTarget(cardsEl, key, ordered);
 
 		const addEl = columnEl.createEl("button", { cls: "pmb-add-card", text: "Add card" });
-		this.registerDomEvent(addEl, "click", () => void this.addCard(key, config));
+		this.registerDomEvent(addEl, "click", () => void this.addCard(key, config, ordered));
 	}
 
 	private renderDraggableCard(
@@ -133,7 +137,11 @@ export class BoardView extends BasesView {
 		});
 	}
 
-	private registerDropTarget(cardsEl: HTMLElement, columnKey: string | null): void {
+	private registerDropTarget(
+		cardsEl: HTMLElement,
+		columnKey: string | null,
+		columnEntries: BasesEntry[],
+	): void {
 		this.registerDomEvent(cardsEl, "dragover", (event) => {
 			if (!this.draggedPath) return;
 			// Only a cancelled dragover marks the element as a valid drop target.
@@ -150,7 +158,7 @@ export class BoardView extends BasesView {
 			if (!path) return;
 			event.preventDefault();
 			const index = insertionIndexAt(cardBounds(cardsEl), event.clientY);
-			void this.moveCard(path, columnKey, index);
+			void this.moveCard(path, columnKey, index, columnEntries);
 		});
 	}
 
@@ -171,12 +179,17 @@ export class BoardView extends BasesView {
 	 * Creates a note already belonging to the column it was added from, so it
 	 * does not land outside the board's own filter and vanish.
 	 */
-	private async addCard(columnKey: string | null, config: BoardConfig): Promise<void> {
+	private async addCard(
+		columnKey: string | null,
+		config: BoardConfig,
+		columnEntries: BasesEntry[],
+	): Promise<void> {
 		const groupProperty = groupByPropertyOf(this.config);
 		const frontmatterKey = groupProperty ? frontmatterKeyOf(groupProperty) : null;
 
-		const group = this.data.groupedData.find((entry) => groupKeyOf(entry) === columnKey);
-		const ordered = group ? this.orderedEntries(group, config.orderProperty) : [];
+		const ordered = sortByOrderKey(columnEntries, (entry) =>
+			this.orderKeyOf(entry, config.orderProperty),
+		);
 		const plan = planInsertion(
 			ordered.map((entry) => this.orderKeyOf(entry, config.orderProperty)),
 			config.newCardsToTop ? 0 : ordered.length,
@@ -226,6 +239,7 @@ export class BoardView extends BasesView {
 		path: string,
 		columnKey: string | null,
 		dropIndex: number,
+		columnEntries: BasesEntry[],
 	): Promise<void> {
 		const file = this.app.vault.getFileByPath(path);
 		if (!file) return;
@@ -251,8 +265,9 @@ export class BoardView extends BasesView {
 			return;
 		}
 
-		const group = this.data.groupedData.find((entry) => groupKeyOf(entry) === columnKey);
-		const ordered = group ? this.orderedEntries(group, config.orderProperty) : [];
+		const ordered = sortByOrderKey(columnEntries, (entry) =>
+			this.orderKeyOf(entry, config.orderProperty),
+		);
 		const movedFrom = ordered.findIndex((entry) => entry.file.path === path);
 		const neighbours = ordered.filter((entry) => entry.file.path !== path);
 
@@ -292,15 +307,9 @@ export class BoardView extends BasesView {
 	}
 
 	/**
-	 * Manual order overrides the query's own sort, so cards stay where they were
+	 * Manual order overrides the query's own sort, so a card stays where it was
 	 * dropped rather than jumping back on the next refresh.
 	 */
-	private orderedEntries(group: BasesEntryGroup, orderProperty: string): BasesEntry[] {
-		return [...group.entries].sort((a, b) =>
-			compareOrderKeys(this.orderKeyOf(a, orderProperty), this.orderKeyOf(b, orderProperty)),
-		);
-	}
-
 	private orderKeyOf(entry: BasesEntry, orderProperty: string): string | null {
 		return resolveOrderKey(
 			this.rawValue(entry, orderProperty),

@@ -97,6 +97,14 @@ export function resolveOrderKey(
 	return sanitiseOrderKey(legacy);
 }
 
+/**
+ * Orders a column's cards. Keys are read through `keyOf` at call time rather
+ * than captured, so a sort taken after a write reflects it.
+ */
+export function sortByOrderKey<T>(entries: T[], keyOf: (entry: T) => string | null): T[] {
+	return [...entries].sort((a, b) => compareOrderKeys(keyOf(a), keyOf(b)));
+}
+
 /** Sorts by order key, sinking cards that have none to the bottom. */
 export function compareOrderKeys(a: string | null, b: string | null): number {
 	if (a === b) return 0;

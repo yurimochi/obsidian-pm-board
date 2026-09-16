@@ -8,6 +8,7 @@ import {
 	planInsertion,
 	resolveOrderKey,
 	sanitiseOrderKey,
+	sortByOrderKey,
 } from "../src/order";
 
 describe("sanitiseOrderKey", () => {
@@ -159,6 +160,28 @@ describe("compareOrderKeys", () => {
 
 	it("treats two missing keys as equal", () => {
 		expect(compareOrderKeys(null, null)).toBe(0);
+	});
+});
+
+describe("sortByOrderKey", () => {
+	const keyOf = (entry: { key: string | null }) => entry.key;
+
+	it("orders by key and sinks unkeyed cards", () => {
+		const entries = [{ key: "a2" }, { key: null }, { key: "a1" }];
+		expect(sortByOrderKey(entries, keyOf).map(keyOf)).toEqual(["a1", "a2", null]);
+	});
+
+	it("reads keys at call time, so a rewrite is reflected", () => {
+		const entries = [{ key: "a2" }, { key: "a1" }];
+		expect(sortByOrderKey(entries, keyOf).map(keyOf)).toEqual(["a1", "a2"]);
+		entries[0].key = "a0";
+		expect(sortByOrderKey(entries, keyOf).map(keyOf)).toEqual(["a0", "a1"]);
+	});
+
+	it("does not mutate the input", () => {
+		const entries = [{ key: "a2" }, { key: "a1" }];
+		sortByOrderKey(entries, keyOf);
+		expect(entries.map(keyOf)).toEqual(["a2", "a1"]);
 	});
 });
 
