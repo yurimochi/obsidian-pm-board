@@ -8,6 +8,20 @@ export default class PmBoardPlugin extends Plugin {
 			name: "Board",
 			icon: "layout-grid",
 			factory: (controller, containerEl) => new BoardView(controller, containerEl),
+			options: () => [
+				{
+					key: "cardOpenBehavior",
+					type: "dropdown",
+					displayName: "Card Detail",
+					default: "active",
+					options: {
+						active: "Active pane / tab",
+						modal: "Floating modal",
+						split: "Split to the right",
+						tab: "New tab",
+					},
+				},
+			],
 		});
 
 		// Registration fails silently when Bases is off, leaving the view type

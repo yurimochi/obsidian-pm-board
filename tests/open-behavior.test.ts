@@ -27,7 +27,12 @@ describe("resolveOpenTarget", () => {
 		expect(resolveOpenTarget("tab", alt)).toBe("tab");
 	});
 
-	it("falls back to the active pane for the not-yet-built modal behaviour", () => {
-		expect(resolveOpenTarget("modal", plain)).toBe(false);
+	it("opens the floating card detail when configured", () => {
+		expect(resolveOpenTarget("modal", plain)).toBe("modal");
+	});
+
+	it("lets modifiers override modal too", () => {
+		expect(resolveOpenTarget("modal", mod)).toBe("tab");
+		expect(resolveOpenTarget("modal", modAlt)).toBe("split");
 	});
 });

@@ -13,14 +13,17 @@ export interface OpenModifiers {
  * users already know keep working on any board.
  *
  * Returns false for "open in the active pane", matching Workspace.getLeaf.
+ * Returns "modal" for the board's own floating card detail, which has no
+ * equivalent among Obsidian's built-in pane types.
  */
 export function resolveOpenTarget(
 	behavior: CardOpenBehavior,
 	modifiers: OpenModifiers,
-): PaneType | false {
+): PaneType | "modal" | false {
 	if (modifiers.mod && modifiers.alt) return "split";
 	if (modifiers.mod) return "tab";
 	if (behavior === "tab") return "tab";
 	if (behavior === "split") return "split";
+	if (behavior === "modal") return "modal";
 	return false;
 }

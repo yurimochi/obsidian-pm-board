@@ -111,6 +111,25 @@ The board's own values are written last: the column's value, the lane's value
 when swimlanes are on, and the order key. A template or a default cannot
 displace a card from the column it was added from.
 
+## Card detail
+
+**Card Detail**, in the view's configuration, sets what a plain click on a
+card does:
+
+| Setting | Effect |
+| --- | --- |
+| Active pane / tab | Replaces the tab the board is in (default) |
+| Floating modal | Opens a preview of the note in a modal over the board |
+| Split to the right | Opens the note in a new pane beside the board |
+| New tab | Opens the note in a new tab |
+
+Modifier keys always win over the setting, matching the rest of Obsidian:
+Ctrl/Cmd-click opens a new tab, and Ctrl/Cmd-Alt-click opens a split.
+
+The floating modal is a rendered, read-only preview with an **Open note**
+button rather than a live editor, so it only needs the same public rendering
+API any plugin can use, with nothing read from the workspace's internals.
+
 ## Known gaps
 
 - **Keyboard support is unverified.** The navigation and move logic is covered

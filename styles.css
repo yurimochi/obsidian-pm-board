@@ -268,3 +268,12 @@
 .pmb-chip:empty {
 	display: none;
 }
+
+.pmb-card-detail.modal {
+	width: min(700px, 90vw);
+	max-height: 85vh;
+}
+
+.pmb-card-detail-open {
+	margin-bottom: var(--size-4-3);
+}

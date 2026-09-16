@@ -21,6 +21,7 @@ import {
 	readBoardConfig,
 } from "./board-config";
 import { cardTitle, renderCard } from "./card";
+import { CardDetailModal } from "./card-detail-modal";
 import { groupKeyOf, sortGroups } from "./column-order";
 import { BOARD_VIEW_TYPE } from "./constants";
 import { parseCoverReference } from "./cover";
@@ -551,6 +552,10 @@ export class BoardView extends BasesView {
 
 	private openEntry(entry: BasesEntry, config: BoardConfig, modifiers: OpenModifiers): void {
 		const target = resolveOpenTarget(config.cardOpenBehavior, modifiers);
+		if (target === "modal") {
+			new CardDetailModal(this.app, entry.file).open();
+			return;
+		}
 		void this.app.workspace.getLeaf(target).openFile(entry.file);
 	}
 
