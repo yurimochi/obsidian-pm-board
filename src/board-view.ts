@@ -1,6 +1,5 @@
 import {
 	BasesEntry,
-	BasesEntryGroup,
 	BasesPropertyId,
 	BasesView,
 	Keymap,
@@ -31,6 +30,7 @@ import {
 	resolveOrderKey,
 	sortByOrderKey,
 } from "./order";
+import { buildLanes, Lane, LaneColumn } from "./swimlanes";
 
 export class BoardView extends BasesView {
 	type = BOARD_VIEW_TYPE;
@@ -59,19 +59,49 @@ export class BoardView extends BasesView {
 		if (!this.boardEl) return;
 		const config = readBoardConfig(this.config);
 		const properties = this.config.getOrder();
+		const laneProperty = config.swimlaneProperty;
+
+		const lanes = buildLanes(
+			sortGroups(this.data.groupedData, config.boardColumns),
+			groupKeyOf,
+			laneProperty ? (entry) => textValueOf(entry, laneProperty) : null,
+		);
+
 		this.boardEl.empty();
-		for (const group of sortGroups(this.data.groupedData, config.boardColumns)) {
-			this.renderColumn(this.boardEl, group, config, properties);
+		this.boardEl.toggleClass("pmb-board-laned", lanes.length > 1 || laneProperty !== null);
+		for (const lane of lanes) {
+			this.renderLane(this.boardEl, lane, config, properties);
+		}
+	}
+
+	private renderLane(
+		parentEl: HTMLElement,
+		lane: Lane,
+		config: BoardConfig,
+		properties: BasesPropertyId[],
+	): void {
+		const laneEl = parentEl.createDiv({ cls: "pmb-lane" });
+		if (config.swimlaneProperty) {
+			laneEl.createDiv({
+				cls: "pmb-lane-title",
+				text: lane.key ?? NO_VALUE_COLLAPSE_KEY,
+			});
+		}
+
+		const columnsEl = laneEl.createDiv({ cls: "pmb-lane-columns" });
+		for (const column of lane.columns) {
+			this.renderColumn(columnsEl, column, config, properties, lane.key);
 		}
 	}
 
 	private renderColumn(
 		parentEl: HTMLElement,
-		group: BasesEntryGroup,
+		column: LaneColumn,
 		config: BoardConfig,
 		properties: BasesPropertyId[],
+		laneKey: string | null,
 	): void {
-		const key = groupKeyOf(group);
+		const key = column.key;
 		const collapsed = config.collapsedColumns.has(collapseKey(key));
 		const limit = lookupColumn(config.wipLimits, key);
 
@@ -79,7 +109,7 @@ export class BoardView extends BasesView {
 		columnEl.toggleClass("pmb-column-collapsed", collapsed);
 		columnEl.toggleClass(
 			"pmb-column-over-limit",
-			limit !== null && group.entries.length > limit,
+			limit !== null && column.entries.length > limit,
 		);
 
 		const headerEl = columnEl.createEl("button", { cls: "pmb-column-header" });
@@ -88,13 +118,15 @@ export class BoardView extends BasesView {
 		headerEl.createSpan({
 			cls: "pmb-column-count",
 			text:
-				limit === null ? String(group.entries.length) : `${group.entries.length}/${limit}`,
+				limit === null
+					? String(column.entries.length)
+					: `${column.entries.length}/${limit}`,
 		});
 		this.registerDomEvent(headerEl, "click", () => this.toggleColumn(key, collapsed));
 
 		if (collapsed) return;
 
-		const ordered = sortByOrderKey(group.entries, (entry) =>
+		const ordered = sortByOrderKey(column.entries, (entry) =>
 			this.orderKeyOf(entry, config.orderProperty),
 		);
 
@@ -102,11 +134,11 @@ export class BoardView extends BasesView {
 		for (const entry of ordered) {
 			this.renderDraggableCard(cardsEl, entry, config, properties);
 		}
-		this.registerDropTarget(cardsEl, key, ordered);
+		this.registerDropTarget(cardsEl, key, ordered, laneKey);
 
 		const addEl = columnEl.createEl("button", { cls: "pmb-add-card", text: "Add card" });
 		this.registerDomEvent(addEl, "click", () =>
-			this.report(this.addCard(key, config, ordered), "Could not add the card."),
+			this.report(this.addCard(key, config, ordered, laneKey), "Could not add the card."),
 		);
 	}
 
@@ -143,6 +175,7 @@ export class BoardView extends BasesView {
 		cardsEl: HTMLElement,
 		columnKey: string | null,
 		columnEntries: BasesEntry[],
+		laneKey: string | null,
 	): void {
 		this.registerDomEvent(cardsEl, "dragover", (event) => {
 			if (!this.draggedPath) return;
@@ -161,7 +194,7 @@ export class BoardView extends BasesView {
 			event.preventDefault();
 			const index = insertionIndexAt(cardBounds(cardsEl), event.clientY);
 			this.report(
-				this.moveCard(path, columnKey, index, columnEntries),
+				this.moveCard(path, columnKey, index, columnEntries, laneKey),
 				"Could not move the card.",
 			);
 		});
@@ -176,6 +209,22 @@ export class BoardView extends BasesView {
 			console.error(message, error);
 			new Notice(message);
 		});
+	}
+
+	/**
+	 * What to write so a card belongs to the lane it was dropped in. Without
+	 * this a card crossing lanes would take its column change and snap back to
+	 * the lane it came from, since the lane is just another property.
+	 */
+	private laneWrite(
+		config: BoardConfig,
+		laneKey: string | null,
+		sample: BasesEntry | undefined,
+	): { key: string; value: unknown } | null {
+		if (!config.swimlaneProperty) return null;
+		const key = frontmatterKeyOf(config.swimlaneProperty);
+		if (!key) return null;
+		return { key, value: coerceGroupValue(laneKey, this.rawValue(sample, key)) };
 	}
 
 	private coverSrcOf(entry: BasesEntry, config: BoardConfig): string | null {
@@ -199,6 +248,7 @@ export class BoardView extends BasesView {
 		columnKey: string | null,
 		config: BoardConfig,
 		columnEntries: BasesEntry[],
+		laneKey: string | null,
 	): Promise<void> {
 		const groupProperty = groupByPropertyOf(this.config);
 		const frontmatterKey = groupProperty ? frontmatterKeyOf(groupProperty) : null;
@@ -219,11 +269,14 @@ export class BoardView extends BasesView {
 		// exist, so writing them now leaves the column consistent either way.
 		await this.applyHealedKeys(plan.healed, ordered, config.orderProperty);
 
+		const lane = this.laneWrite(config, laneKey, ordered[0]);
+
 		await this.createFileForView(undefined, (frontmatter: Record<string, unknown>) => {
 			// The board's own bookkeeping wins over configured defaults, so a
 			// default cannot place the new card outside the column it came from.
 			Object.assign(frontmatter, config.newItemProperties);
 			if (frontmatterKey && value !== null) frontmatter[frontmatterKey] = value;
+			if (lane) assign(frontmatter, lane.key, lane.value);
 			frontmatter[config.orderProperty] = plan.insertKey;
 		});
 	}
@@ -260,6 +313,7 @@ export class BoardView extends BasesView {
 		columnKey: string | null,
 		dropIndex: number,
 		columnEntries: BasesEntry[],
+		laneKey: string | null,
 	): Promise<void> {
 		const config = readBoardConfig(this.config);
 		const groupProperty = groupByPropertyOf(this.config);
@@ -296,9 +350,12 @@ export class BoardView extends BasesView {
 
 		await this.applyHealedKeys(plan.healed, neighbours, config.orderProperty);
 
+		const lane = this.laneWrite(config, laneKey, ordered[0]);
+
 		await this.writeFrontMatter(path, (frontmatter) => {
 			if (value === null) delete frontmatter[frontmatterKey];
 			else frontmatter[frontmatterKey] = value;
+			if (lane) assign(frontmatter, lane.key, lane.value);
 			frontmatter[config.orderProperty] = plan.insertKey;
 		});
 	}
@@ -355,6 +412,18 @@ export class BoardView extends BasesView {
 		});
 		void this.app.workspace.getLeaf(target).openFile(entry.file);
 	}
+}
+
+/** Writes a property, or clears it when the target has no value. */
+function assign(frontmatter: Record<string, unknown>, key: string, value: unknown): void {
+	if (value === null) delete frontmatter[key];
+	else frontmatter[key] = value;
+}
+
+/** A property's value as a lane label, or null when it is unset. */
+function textValueOf(entry: BasesEntry, property: BasesPropertyId): string | null {
+	const text = entry.getValue(property)?.toString().trim();
+	return text ? text : null;
 }
 
 function cardBounds(cardsEl: HTMLElement): { top: number; height: number }[] {

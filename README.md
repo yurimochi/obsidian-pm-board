@@ -33,9 +33,30 @@ These are the things PM-Board sets out to do differently:
 - [x] Card property chips and tags
 - [x] Card cover images
 - [x] Adding cards from a column
-- [ ] Swimlanes (two-axis grouping)
+- [x] Swimlanes (two-axis grouping)
 - [ ] Keyboard-driven card moves and ARIA semantics
 - [ ] Touch support and mobile layout
+
+## Swimlanes
+
+Set `swimlaneProperty` on the view to group on a second axis. The board then
+splits into horizontal lanes, one per value of that property, each carrying the
+full set of columns so a column means the same thing in every lane. Dragging a
+card between lanes writes the lane's value to the note, the same way moving it
+between columns writes the column's.
+
+```yaml
+views:
+  - type: pm-board
+    name: Delivery
+    groupBy:
+      property: status
+    swimlaneProperty: note.team
+```
+
+Lanes follow the order the query yields them, and cards with no value for the
+property collect in a final lane. A WIP limit applies to each lane's stack
+rather than to the column as a whole.
 
 ## Card order
 

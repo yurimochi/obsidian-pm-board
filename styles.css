@@ -1,10 +1,41 @@
 .pmb-board {
 	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-4);
+	height: 100%;
+	overflow: auto;
+	padding: var(--size-4-3);
+}
+
+.pmb-lane-columns {
+	display: flex;
 	gap: var(--size-4-3);
 	align-items: flex-start;
-	height: 100%;
-	overflow-x: auto;
-	padding: var(--size-4-3);
+}
+
+/* Without lanes the single row owns the height, so columns can scroll. */
+.pmb-board:not(.pmb-board-laned),
+.pmb-board:not(.pmb-board-laned) .pmb-lane,
+.pmb-board:not(.pmb-board-laned) .pmb-lane-columns {
+	min-height: 0;
+	flex: 1;
+}
+
+.pmb-lane-title {
+	position: sticky;
+	left: 0;
+	margin-bottom: var(--size-4-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+/* Lanes stack, so a lane's columns grow with their contents instead of
+   competing for one screenful of height. */
+.pmb-board-laned .pmb-column {
+	max-height: none;
 }
 
 .pmb-column {

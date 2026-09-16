@@ -35,6 +35,8 @@ export interface BoardConfig {
 	cardTitleProperty: BasesPropertyId | null;
 	/** Property holding the card's cover image. */
 	coverProperty: BasesPropertyId | null;
+	/** Second grouping axis; splits the board into horizontal lanes. */
+	swimlaneProperty: BasesPropertyId | null;
 	/** Property holding the manual drag order. */
 	orderProperty: string;
 }
@@ -61,6 +63,7 @@ export function readBoardConfig(config: BasesViewConfig): BoardConfig {
 		wipLimits: readNumberMap(config, "wipLimits"),
 		cardTitleProperty: config.getAsPropertyId("cardTitleProperty"),
 		coverProperty: config.getAsPropertyId("coverProperty"),
+		swimlaneProperty: config.getAsPropertyId("swimlaneProperty"),
 		orderProperty: readString(config, "orderProperty") ?? DEFAULT_ORDER_PROPERTY,
 	};
 }
