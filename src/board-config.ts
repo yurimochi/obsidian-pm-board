@@ -63,10 +63,25 @@ export function readBoardConfig(config: BasesViewConfig): BoardConfig {
  * sort direction, but a bare property name is also valid.
  */
 export function groupByPropertyOf(config: BasesViewConfig): string | null {
-	const groupBy = config.get("groupBy");
-	if (typeof groupBy === "string") return groupBy || null;
-	if (isPlainObject(groupBy) && typeof groupBy.property === "string") {
-		return groupBy.property || null;
+	const asPropertyId = config.getAsPropertyId("groupBy");
+	if (asPropertyId) return asPropertyId;
+
+	for (const key of ["groupBy", "group_by", "group"]) {
+		const resolved = readPropertyName(config.get(key));
+		if (resolved) return resolved;
+	}
+	return null;
+}
+
+/** Accepts the shapes a group-by setting is known to take. */
+function readPropertyName(value: unknown): string | null {
+	if (typeof value === "string") return value || null;
+	if (!isPlainObject(value)) return null;
+
+	const property = value.property ?? value.prop ?? value.name ?? value.id;
+	if (typeof property === "string") return property || null;
+	if (isPlainObject(property) && typeof property.name === "string") {
+		return property.name || null;
 	}
 	return null;
 }

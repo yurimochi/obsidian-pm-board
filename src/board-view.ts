@@ -149,9 +149,17 @@ export class BoardView extends BasesView {
 
 		const config = readBoardConfig(this.config);
 		const groupProperty = groupByPropertyOf(this.config);
-		const frontmatterKey = groupProperty ? frontmatterKeyOf(groupProperty) : null;
+		if (!groupProperty) {
+			console.error("PM-Board could not read the group-by property from:", this.config);
+			new Notice("Could not tell which property this board groups by. See the console.");
+			return;
+		}
+
+		const frontmatterKey = frontmatterKeyOf(groupProperty);
 		if (!frontmatterKey) {
-			new Notice("This board groups by a computed property, so its cards cannot be moved.");
+			new Notice(
+				`Cards cannot be moved: this board groups by ${groupProperty}, which is computed.`,
+			);
 			return;
 		}
 

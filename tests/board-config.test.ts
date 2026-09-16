@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	collapseKey,
+	groupByPropertyOf,
 	DEFAULT_ORDER_PROPERTY,
 	lookupColumn,
 	orderKey,
@@ -106,6 +107,29 @@ describe("readBoardConfig", () => {
 			fakeConfig({ collapsedColumns: { a: true, b: false, c: "true" } }),
 		);
 		expect([...config.collapsedColumns]).toEqual(["a"]);
+	});
+});
+
+describe("groupByPropertyOf", () => {
+	it("prefers the property id the host resolves", () => {
+		expect(groupByPropertyOf(fakeConfig({ groupBy: "note.due" }))).toBe("note.due");
+	});
+
+	it("reads the object form stored in a .base file", () => {
+		expect(
+			groupByPropertyOf(fakeConfig({ groupBy: { property: "due", direction: "ASC" } })),
+		).toBe("due");
+	});
+
+	it("reads a nested property object", () => {
+		expect(groupByPropertyOf(fakeConfig({ groupBy: { property: { name: "due" } } }))).toBe(
+			"due",
+		);
+	});
+
+	it("returns null when nothing names a property", () => {
+		expect(groupByPropertyOf(fakeConfig({}))).toBeNull();
+		expect(groupByPropertyOf(fakeConfig({ groupBy: { direction: "ASC" } }))).toBeNull();
 	});
 });
 
