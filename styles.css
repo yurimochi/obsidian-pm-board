@@ -67,11 +67,22 @@
 	padding: 0 var(--size-4-2) var(--size-4-2);
 }
 
+.pmb-cards-drop-target {
+	background-color: var(--background-modifier-hover);
+	border-radius: var(--radius-s);
+}
+
 .pmb-card {
 	background-color: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
 	padding: var(--size-4-2);
+	cursor: grab;
+}
+
+.pmb-card-dragging {
+	opacity: 0.4;
+	cursor: grabbing;
 }
 
 .pmb-card-title {

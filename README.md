@@ -7,9 +7,9 @@ kanban-style board whose columns come from the Base's own `groupBy`
 configuration. Cards are your notes; moving a card writes the change straight
 back to the note's frontmatter.
 
-> **Status: early development (0.1.0).** The view renders columns and cards.
-> Drag and drop, swimlanes, and keyboard moves are not implemented yet — see
-> the roadmap below.
+> **Status: early development (0.1.0).** Columns, cards and drag and drop
+> work. Swimlanes and keyboard moves are not implemented yet — see the
+> roadmap below.
 
 ## Design goals
 
@@ -28,9 +28,10 @@ These are the things PM-Board sets out to do differently:
 ## Roadmap
 
 - [x] Board view registered against the Bases API; columns from `groupedData`
-- [ ] Drag and drop between columns, writing to frontmatter
-- [ ] Manual card ordering
-- [ ] Card property chips, cover images, tags
+- [x] Drag and drop between columns, writing to frontmatter
+- [x] Manual card ordering
+- [x] Card property chips and tags
+- [ ] Card cover images
 - [ ] Swimlanes (two-axis grouping)
 - [ ] Keyboard-driven card moves and ARIA semantics
 - [ ] Touch support and mobile layout

@@ -58,6 +58,19 @@ export function readBoardConfig(config: BasesViewConfig): BoardConfig {
 	};
 }
 
+/**
+ * The property the board groups by. Bases stores it as an object alongside a
+ * sort direction, but a bare property name is also valid.
+ */
+export function groupByPropertyOf(config: BasesViewConfig): string | null {
+	const groupBy = config.get("groupBy");
+	if (typeof groupBy === "string") return groupBy || null;
+	if (isPlainObject(groupBy) && typeof groupBy.property === "string") {
+		return groupBy.property || null;
+	}
+	return null;
+}
+
 /** The key a group is stored under in `collapsedColumns`. */
 export function collapseKey(groupKey: string | null): string {
 	return groupKey ?? NO_VALUE_COLLAPSE_KEY;

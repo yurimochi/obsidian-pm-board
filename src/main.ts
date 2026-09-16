@@ -13,7 +13,7 @@ export default class PmBoardPlugin extends Plugin {
 		// Registration fails silently when Bases is off, leaving the view type
 		// missing from the selector with nothing to explain why.
 		if (!registered) {
-			new Notice("PM-Board needs the Bases core plugin enabled to add its board view.");
+			new Notice("Bases must be enabled for the board view to appear.");
 		}
 	}
 }
