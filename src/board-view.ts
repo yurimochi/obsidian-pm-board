@@ -30,6 +30,7 @@ import {
 import { cardTitle, renderCard } from "./card";
 import { CardDetailModal } from "./card-detail-modal";
 import { groupKeyOf, sortGroups } from "./column-order";
+import { ConfirmModal } from "./confirm-modal";
 import { BOARD_VIEW_TYPE } from "./constants";
 import { parseCoverReference } from "./cover";
 import { coerceGroupValue, frontmatterKeyOf } from "./frontmatter";
@@ -52,8 +53,10 @@ import {
 	sortByOrderKey,
 } from "./order";
 import { PromptModal } from "./prompt-modal";
+import { addDays, isoDate, nextWeekStart } from "./schedule";
 import { buildLanes, Lane, LaneColumn } from "./swimlanes";
 import { applyPlaceholders, joinPath, uniqueName } from "./template";
+import { parseTagList } from "./tag-colors";
 
 export class BoardView extends BasesView {
 	type = BOARD_VIEW_TYPE;
@@ -345,7 +348,7 @@ export class BoardView extends BasesView {
 		// where dragging is not available.
 		this.registerDomEvent(cardEl, "contextmenu", (event) => {
 			event.preventDefault();
-			this.showCardMenu(event, entry, config, at);
+			this.showCardMenu(event, entry, config, at, cardEl);
 		});
 		this.registerDomEvent(cardEl, "click", (event) =>
 			this.openEntry(entry, config, {
@@ -920,22 +923,99 @@ export class BoardView extends BasesView {
 		entry: BasesEntry,
 		config: BoardConfig,
 		at: BoardPosition,
+		cardEl: HTMLElement,
 	): void {
 		const menu = new Menu();
 		const lane = this.lanes[at.lane];
+		const column = lane.columns[at.column];
+		const groupProperty = groupByPropertyOf(this.config);
+		const scheduleKey = groupProperty ? frontmatterKeyOf(groupProperty) : null;
 
+		menu.addItem((item) =>
+			item
+				.setTitle("Edit tags")
+				.setIcon("lucide-tags")
+				.onClick(() => this.report(this.editTags(entry), "Could not edit tags.")),
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle("Open")
+				.setIcon("lucide-file")
+				.onClick(() => this.openEntry(entry, config, { mod: false, alt: false })),
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle("Open in new tab")
+				.setIcon("lucide-file-plus")
+				.onClick(() => this.openEntry(entry, config, { mod: true, alt: false })),
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle("Open to the side")
+				.setIcon("lucide-separator-vertical")
+				.onClick(() => this.openEntry(entry, config, { mod: true, alt: true })),
+		);
+
+		menu.addSeparator();
+		menu.addItem((item) =>
+			item
+				.setTitle("Rename")
+				.setIcon("lucide-pencil")
+				.onClick(() => this.startRename(cardEl, entry)),
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle("Duplicate")
+				.setIcon("lucide-copy")
+				.onClick(() =>
+					this.report(
+						this.duplicateCard(entry, config, at),
+						"Could not duplicate the card.",
+					),
+				),
+		);
+
+		if (this.dateGrouped && scheduleKey) {
+			const now = new Date();
+			const currentKey = column?.key ?? null;
+			const candidates: [string, Date][] = [
+				["Schedule today", now],
+				["Schedule tomorrow", addDays(now, 1)],
+				["Schedule next week", nextWeekStart(now)],
+			];
+			const targets = candidates.filter(([, date]) => isoDate(date) !== currentKey);
+
+			if (targets.length > 0) {
+				menu.addSeparator();
+				for (const [title, date] of targets) {
+					menu.addItem((item) =>
+						item
+							.setTitle(title)
+							.setIcon("lucide-calendar")
+							.onClick(() =>
+								this.report(
+									this.scheduleCard(entry, scheduleKey, date),
+									"Could not reschedule the card.",
+								),
+							),
+					);
+				}
+			}
+		}
+
+		menu.addSeparator();
 		menu.addItem((item) => item.setIsLabel(true).setTitle("Move to column"));
-		lane.columns.forEach((column, index) => {
+		lane.columns.forEach((col, index) => {
 			menu.addItem((item) =>
 				item
-					.setTitle(column.key ?? NO_VALUE_COLLAPSE_KEY)
+					.setTitle(col.key ?? NO_VALUE_COLLAPSE_KEY)
 					.setChecked(index === at.column)
 					.onClick(() => {
 						if (index === at.column) return;
 						this.moveTo(entry, config, {
 							lane: at.lane,
 							column: index,
-							index: column.entries.length,
+							index: col.entries.length,
 						});
 					}),
 			);
@@ -965,18 +1045,139 @@ export class BoardView extends BasesView {
 		menu.addSeparator();
 		menu.addItem((item) =>
 			item
-				.setTitle("Open in new tab")
-				.setIcon("lucide-file-plus")
-				.onClick(() => this.openEntry(entry, config, { mod: true, alt: false })),
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle("Open to the side")
-				.setIcon("lucide-separator-vertical")
-				.onClick(() => this.openEntry(entry, config, { mod: true, alt: true })),
+				.setTitle("Delete")
+				.setIcon("lucide-trash-2")
+				.onClick(() => this.report(this.deleteCard(entry), "Could not delete the card.")),
 		);
 
 		menu.showAtMouseEvent(event);
+	}
+
+	private async editTags(entry: BasesEntry): Promise<void> {
+		const current = parseTagList(this.rawValue(entry, "tags"));
+		const next = await PromptModal.prompt(this.app, {
+			title: "Edit tags",
+			initialValue: current.join(", "),
+			placeholder: "task, bug, ...",
+		});
+		if (next === null) return;
+
+		const tags = parseTagList(next);
+		await this.writeFrontMatter(entry.file.path, (frontmatter) => {
+			if (tags.length > 0) frontmatter.tags = tags;
+			else delete frontmatter.tags;
+		});
+	}
+
+	/**
+	 * Edits the title in place on the card rather than through a popup, since
+	 * that is what was asked for. Renames the file itself, the same as
+	 * Obsidian's own Rename: any property standing in as the card's display
+	 * title is untouched, matching how the rest of the board treats a card's
+	 * identity as its file rather than whatever property happens to label it.
+	 */
+	private startRename(cardEl: HTMLElement, entry: BasesEntry): void {
+		const titleEl = cardEl.querySelector<HTMLElement>(".pmb-card-title");
+		if (!titleEl) return;
+		const original = entry.file.basename;
+		titleEl.empty();
+
+		const inputEl = titleEl.createEl("input", { cls: "pmb-card-title-input" });
+		inputEl.type = "text";
+		inputEl.value = original;
+
+		let settled = false;
+		const finish = (commit: boolean): void => {
+			if (settled) return;
+			settled = true;
+			const next = inputEl.value.trim();
+			if (!commit || !next || next === original) {
+				this.onDataUpdated();
+				return;
+			}
+			// A successful rename redraws through the vault's own rename event;
+			// a failed one (a name collision, say) has to redraw here, or the
+			// input is left showing with nothing left able to submit it.
+			this.renameCardFile(entry, next).catch((error: unknown) => {
+				console.error("Could not rename the card.", error);
+				new Notice("Could not rename the card.");
+				this.onDataUpdated();
+			});
+		};
+
+		this.registerDomEvent(inputEl, "click", (event) => event.stopPropagation());
+		this.registerDomEvent(inputEl, "keydown", (event) => {
+			event.stopPropagation();
+			if (event.key === "Enter") {
+				event.preventDefault();
+				finish(true);
+			} else if (event.key === "Escape") {
+				event.preventDefault();
+				finish(false);
+			}
+		});
+		this.registerDomEvent(inputEl, "blur", () => finish(true));
+
+		inputEl.focus();
+		inputEl.select();
+	}
+
+	private async renameCardFile(entry: BasesEntry, newName: string): Promise<void> {
+		const folder = entry.file.parent?.path ?? "";
+		await this.app.fileManager.renameFile(entry.file, joinPath(folder, `${newName}.md`));
+	}
+
+	/** Inserts the copy right after the original in its own column, rather than leaving it with a tied order key. */
+	private async duplicateCard(
+		entry: BasesEntry,
+		config: BoardConfig,
+		at: BoardPosition,
+	): Promise<void> {
+		const folder = entry.file.parent?.path ?? "";
+		const base = entry.file.basename.replace(/-\d+$/, "");
+		let suffix = 2;
+		while (this.app.vault.getAbstractFileByPath(joinPath(folder, `${base}-${suffix}.md`))) {
+			suffix++;
+		}
+		const copy = await this.app.vault.copy(
+			entry.file,
+			joinPath(folder, `${base}-${suffix}.md`),
+		);
+
+		const column = this.lanes[at.lane]?.columns[at.column];
+		if (!column) return;
+		const ordered = sortByOrderKey(column.entries, (e) =>
+			this.orderKeyOf(e, config.orderProperty),
+		);
+		const originalIndex = ordered.findIndex((e) => e.file.path === entry.file.path);
+		const plan = planInsertion(
+			ordered.map((e) => this.orderKeyOf(e, config.orderProperty)),
+			originalIndex === -1 ? ordered.length : originalIndex + 1,
+		);
+		await this.applyHealedKeys(plan.healed, ordered, config.orderProperty);
+		await this.writeFrontMatter(copy.path, (frontmatter) => {
+			frontmatter[config.orderProperty] = plan.insertKey;
+		});
+	}
+
+	private async deleteCard(entry: BasesEntry): Promise<void> {
+		const confirmed = await ConfirmModal.confirm(this.app, {
+			title: "Delete card",
+			message: `Delete "${entry.file.basename}"? The note goes to your configured trash, not permanently deleted.`,
+			cta: "Delete",
+		});
+		if (!confirmed) return;
+		await this.app.fileManager.trashFile(entry.file);
+	}
+
+	private async scheduleCard(
+		entry: BasesEntry,
+		frontmatterKey: string,
+		date: Date,
+	): Promise<void> {
+		await this.writeFrontMatter(entry.file.path, (frontmatter) => {
+			frontmatter[frontmatterKey] = isoDate(date);
+		});
 	}
 
 	private moveTo(entry: BasesEntry, config: BoardConfig, to: BoardPosition): void {

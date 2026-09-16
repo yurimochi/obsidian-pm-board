@@ -86,6 +86,29 @@ actions.
 On a narrow screen a column nearly fills the width and the board is swiped
 sideways between columns, so a column is readable rather than half visible.
 
+## Card menu
+
+Right-click (or long-press) a card for:
+
+- **Edit tags** writes a comma-separated list to the note's frontmatter
+  `tags`. Inline `#tags` in the note body are read for the card's tag chips
+  but not touched here.
+- **Open**, **Open in new tab**, **Open to the side** — the same three
+  targets a plain click, Ctrl/Cmd-click and Ctrl/Cmd-Alt-click reach.
+- **Rename** edits the title in place on the card; Enter or clicking away
+  saves, Escape cancels. Renames the file itself, the same as Obsidian's own
+  Rename — a property standing in as the card's display title is untouched.
+- **Duplicate** copies the note into `Name-2.md`, `Name-3.md`, and so on,
+  inserted right after the original in its own column.
+- **Schedule today / tomorrow / next week** write today's, tomorrow's, or
+  next Monday's date to the property the board groups by. Only appear when
+  that property holds dates, and only for the ones that would not just put
+  the card back in the column it's already in.
+- **Move to column** / **Move to lane** — unchanged from before; still the
+  only way to move a card without a pointer.
+- **Delete** moves the note to your configured trash, after a confirmation
+  that names the file.
+
 ## New cards
 
 Cards added from a column are created by the plugin rather than by the host's
@@ -178,6 +201,11 @@ to a rendered, read-only preview with an **Open note** button instead.
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through
   `boardColumns`.
+- **The card menu's new items are unverified in a vault.** Edit tags,
+  Rename, Duplicate, Delete and Schedule are covered by unit tests for the
+  logic they depend on (tag parsing, the next-Monday calculation, insertion
+  ordering), but not by exercising the menu itself, including Delete's own
+  destructive path, in a running vault.
 - **Persisting a collapsed column relies on an undocumented call.** The typed
   API offers no way to tell the host that a view's stored settings changed, so
   the plugin looks one up on the query controller at runtime. It is never

@@ -293,6 +293,17 @@
 	line-height: 1.3;
 }
 
+.pmb-card-title-input {
+	width: 100%;
+	font: inherit;
+	font-weight: inherit;
+	color: inherit;
+	background-color: var(--background-primary);
+	border: 1px solid var(--interactive-accent);
+	border-radius: var(--radius-s);
+	padding: 0 var(--size-2-2);
+}
+
 .pmb-card-date {
 	margin-top: var(--size-4-3);
 	color: var(--text-faint);
