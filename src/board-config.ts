@@ -29,6 +29,8 @@ export interface BoardConfig {
 	boardColumns: string[] | null;
 	/** Tag name to hex colour. */
 	tagColors: Map<string, string>;
+	/** Column key to work-in-progress limit. */
+	wipLimits: Map<string, number>;
 	/** Property used as the card heading instead of the filename. */
 	cardTitleProperty: BasesPropertyId | null;
 	/** Property holding the card's cover image. */
@@ -49,6 +51,7 @@ export function readBoardConfig(config: BasesViewConfig): BoardConfig {
 		collapsedColumns: readTruthyKeys(config, "collapsedColumns"),
 		boardColumns: readStringArray(config, "boardColumns"),
 		tagColors: readStringMap(config, "tagColors"),
+		wipLimits: readNumberMap(config, "wipLimits"),
 		cardTitleProperty: config.getAsPropertyId("cardTitleProperty"),
 		coverProperty: config.getAsPropertyId("coverProperty"),
 		orderProperty: readString(config, "orderProperty") ?? DEFAULT_ORDER_PROPERTY,
@@ -63,6 +66,15 @@ export function collapseKey(groupKey: string | null): string {
 /** The key a group is stored under in `boardColumns`. */
 export function orderKey(groupKey: string | null): string {
 	return groupKey ?? NO_VALUE_ORDER_KEY;
+}
+
+/**
+ * Looks a column up in a settings map, tolerating both spellings of the
+ * no-value key. Date-keyed columns are looked up by their text form; whether
+ * the host hands those keys back as ISO text still needs checking in a vault.
+ */
+export function lookupColumn<T>(map: Map<string, T>, groupKey: string | null): T | null {
+	return map.get(collapseKey(groupKey)) ?? map.get(orderKey(groupKey)) ?? null;
 }
 
 function readString(config: BasesViewConfig, key: string): string | null {
@@ -92,6 +104,36 @@ function readTruthyKeys(config: BasesViewConfig, key: string): Set<string> {
 	const value = config.get(key);
 	if (!isPlainObject(value)) return new Set();
 	return new Set(Object.keys(value).filter((k) => value[k] === true));
+}
+
+/**
+ * Map keys are normalised because YAML resolves an unquoted key like
+ * `2026-09-15` to a date, which would otherwise stringify to a form no column
+ * key ever matches.
+ */
+function readNumberMap(config: BasesViewConfig, key: string): Map<string, number> {
+	const value = config.get(key);
+	if (!isPlainObject(value)) return new Map();
+	const result = new Map<string, number>();
+	for (const [k, v] of Object.entries(value)) {
+		if (Number.isInteger(v) && (v as number) >= 0) {
+			result.set(normaliseMapKey(k), v as number);
+		}
+	}
+	return result;
+}
+
+/** Matches the way a JS Date stringifies, e.g. "Tue Sep 15 2026 00:00:00 ...". */
+const JS_DATE_KEY = /^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{2} \d{4} /;
+
+/**
+ * Object keys are always strings, so a date-valued YAML key arrives already
+ * stringified. Recover the ISO form the rest of the board keys columns by.
+ */
+function normaliseMapKey(key: string): string {
+	if (!JS_DATE_KEY.test(key)) return key;
+	const parsed = new Date(key);
+	return Number.isNaN(parsed.getTime()) ? key : parsed.toISOString().slice(0, 10);
 }
 
 function readStringMap(config: BasesViewConfig, key: string): Map<string, string> {

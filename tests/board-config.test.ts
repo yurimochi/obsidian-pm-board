@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	collapseKey,
 	DEFAULT_ORDER_PROPERTY,
+	lookupColumn,
 	orderKey,
 	readBoardConfig,
 } from "../src/board-config";
@@ -80,11 +81,46 @@ describe("readBoardConfig", () => {
 		expect(config.boardColumns).toEqual(["Todo", "7", "false", ""]);
 	});
 
+	it("reads per-column WIP limits", () => {
+		const config = readBoardConfig(fakeConfig({ wipLimits: { "2026-09-15": 5, Todo: 3 } }));
+		expect(config.wipLimits.get("2026-09-15")).toBe(5);
+		expect(config.wipLimits.get("Todo")).toBe(3);
+	});
+
+	it("recovers the ISO form of a date key that arrived stringified", () => {
+		const config = readBoardConfig(
+			fakeConfig({ wipLimits: { "Tue Sep 15 2026 00:00:00 GMT+0000": 5 } }),
+		);
+		expect(config.wipLimits.get("2026-09-15")).toBe(5);
+	});
+
+	it("ignores WIP limits that are not whole non-negative numbers", () => {
+		const config = readBoardConfig(
+			fakeConfig({ wipLimits: { a: 2.5, b: -1, c: "3", d: null, e: 0 } }),
+		);
+		expect([...config.wipLimits.keys()]).toEqual(["e"]);
+	});
+
 	it("only treats explicitly true columns as collapsed", () => {
 		const config = readBoardConfig(
 			fakeConfig({ collapsedColumns: { a: true, b: false, c: "true" } }),
 		);
 		expect([...config.collapsedColumns]).toEqual(["a"]);
+	});
+});
+
+describe("lookupColumn", () => {
+	it("finds the no-value column under either spelling", () => {
+		expect(lookupColumn(new Map([["(No value)", 1]]), null)).toBe(1);
+		expect(lookupColumn(new Map([["", 2]]), null)).toBe(2);
+	});
+
+	it("finds a named column", () => {
+		expect(lookupColumn(new Map([["Todo", 3]]), "Todo")).toBe(3);
+	});
+
+	it("returns null when the column has no entry", () => {
+		expect(lookupColumn(new Map([["Todo", 3]]), "Done")).toBeNull();
 	});
 });
 

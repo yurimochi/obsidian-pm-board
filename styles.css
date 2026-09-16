@@ -34,6 +34,12 @@
 .pmb-column-count {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+
+.pmb-column-over-limit .pmb-column-count {
+	color: var(--text-error);
+	font-weight: var(--font-bold);
 }
 
 .pmb-cards {

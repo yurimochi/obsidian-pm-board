@@ -1,5 +1,11 @@
 import { BasesEntry, BasesEntryGroup, BasesView, QueryController } from "obsidian";
-import { BoardConfig, collapseKey, NO_VALUE_COLLAPSE_KEY, readBoardConfig } from "./board-config";
+import {
+	BoardConfig,
+	collapseKey,
+	lookupColumn,
+	NO_VALUE_COLLAPSE_KEY,
+	readBoardConfig,
+} from "./board-config";
 import { groupKeyOf, sortGroups } from "./column-order";
 import { BOARD_VIEW_TYPE } from "./constants";
 
@@ -40,9 +46,17 @@ export class BoardView extends BasesView {
 		const columnEl = parentEl.createDiv({ cls: "pmb-column" });
 		columnEl.toggleClass("pmb-column-collapsed", collapsed);
 
+		const limit = lookupColumn(config.wipLimits, key);
+		const overLimit = limit !== null && group.entries.length > limit;
+		columnEl.toggleClass("pmb-column-over-limit", overLimit);
+
 		const headerEl = columnEl.createDiv({ cls: "pmb-column-header" });
 		headerEl.createSpan({ cls: "pmb-column-title", text: key ?? NO_VALUE_COLLAPSE_KEY });
-		headerEl.createSpan({ cls: "pmb-column-count", text: String(group.entries.length) });
+		headerEl.createSpan({
+			cls: "pmb-column-count",
+			text:
+				limit === null ? String(group.entries.length) : `${group.entries.length}/${limit}`,
+		});
 
 		if (collapsed) return;
 
