@@ -197,6 +197,12 @@ export class BoardView extends BasesView {
 		const sample = frontmatterKey ? this.rawValue(ordered[0], frontmatterKey) : undefined;
 		const value = coerceGroupValue(columnKey, sample);
 
+		// Renumber first: creating a note hands off to the host's new-note flow,
+		// and anything queued after that call is at the mercy of when, or
+		// whether, it comes back. The keys below belong to notes that already
+		// exist, so writing them now leaves the column consistent either way.
+		await this.applyHealedKeys(plan.healed, ordered, config.orderProperty);
+
 		await this.createFileForView(undefined, (frontmatter: Record<string, unknown>) => {
 			// The board's own bookkeeping wins over configured defaults, so a
 			// default cannot place the new card outside the column it came from.
@@ -204,8 +210,6 @@ export class BoardView extends BasesView {
 			if (frontmatterKey && value !== null) frontmatter[frontmatterKey] = value;
 			frontmatter[config.orderProperty] = plan.insertKey;
 		});
-
-		await this.applyHealedKeys(plan.healed, ordered, config.orderProperty);
 	}
 
 	/** Collapsed state lives in the board file, so it survives reopening. */
@@ -277,6 +281,8 @@ export class BoardView extends BasesView {
 		);
 		const value = coerceGroupValue(columnKey, this.rawValue(neighbours[0], frontmatterKey));
 
+		await this.applyHealedKeys(plan.healed, neighbours, config.orderProperty);
+
 		await this.app.fileManager.processFrontMatter(
 			file,
 			(frontmatter: Record<string, unknown>) => {
@@ -285,8 +291,6 @@ export class BoardView extends BasesView {
 				frontmatter[config.orderProperty] = plan.insertKey;
 			},
 		);
-
-		await this.applyHealedKeys(plan.healed, neighbours, config.orderProperty);
 	}
 
 	private async applyHealedKeys(
