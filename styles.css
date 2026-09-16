@@ -291,3 +291,16 @@
 	padding: 0;
 	overflow: hidden;
 }
+
+/* Outside the normal workspace tree, Obsidian's own CSS does not carry a
+   height down to the leaf on its own; the split and leaf need it spelled
+   out here, the same way the Hover Editor plugin does for its own popover. */
+.pmb-card-detail-live .workspace-split,
+.pmb-card-detail-live .workspace-leaf {
+	height: 100%;
+	width: 100%;
+}
+
+.pmb-card-detail-live .workspace-split .view-content {
+	background-color: var(--background-primary);
+}

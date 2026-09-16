@@ -131,7 +131,9 @@ the same as opening the note anywhere else. It does this by building a
 `WorkspaceSplit` and a `WorkspaceLeaf` outside the normal workspace tree,
 which the public API does not document a way to do; a first attempt at a
 bare, parentless leaf mounted with no error but rendered nothing, because it
-had no root or container to measure against. The working wiring adapts the
+had no root or container to measure against; the leaf also needs a height
+carried down to it by hand, since it sits outside the DOM tree Obsidian's
+own CSS assumes. The working wiring and the CSS that sizes it both adapt the
 technique the [Hover Editor](https://github.com/nothingislost/obsidian-hover-editor)
 community plugin uses for its own floating panes, an unrelated project used
 here only as a reference for this one undocumented mechanism, not for any
