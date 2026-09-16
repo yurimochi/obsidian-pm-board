@@ -38,6 +38,11 @@ These are the things PM-Board sets out to do differently:
 - [x] Moving cards without a pointer or a drag
 - [x] Mobile layout
 - [x] Column header: add, rename, recolor, WIP limit, delete, drag to reorder
+- [ ] Tag view with filtering somewhere on the board
+- [ ] Better tag colour editing than a raw hex prompt
+- [ ] Projects: a way to group cards by a property, above individual boards
+- [ ] Move board settings into the plugin's own settings tab, instead of
+      hand-edited `.base` YAML
 
 ## Swimlanes
 
