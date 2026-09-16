@@ -5,6 +5,7 @@ import {
 	insertionIndexAt,
 	insertKeyAt,
 	keyBetween,
+	planInsertion,
 	sanitiseOrderKey,
 } from "../src/order";
 
@@ -80,6 +81,50 @@ describe("insertKeyAt", () => {
 
 	it("works around neighbours that have no key yet", () => {
 		expect(() => insertKeyAt([null, null], 1)).not.toThrow();
+	});
+});
+
+describe("planInsertion", () => {
+	it("inserts without touching neighbours when every key is present", () => {
+		const plan = planInsertion(["a1", "a2"], 1);
+		expect(plan.healed).toEqual([null, null]);
+		expect(plan.insertKey > "a1" && plan.insertKey < "a2").toBe(true);
+	});
+
+	it("renumbers the column when a neighbour has no key", () => {
+		const plan = planInsertion([null, null], 2);
+		expect(plan.healed.every((key) => key !== null)).toBe(true);
+		expect(plan.healed).toHaveLength(2);
+	});
+
+	it("keeps a card dropped at the bottom at the bottom", () => {
+		const plan = planInsertion([null, null, null], 3);
+		const healed = plan.healed as string[];
+		expect(healed.every((key) => key < plan.insertKey)).toBe(true);
+	});
+
+	it("keeps a card dropped at the top at the top", () => {
+		const plan = planInsertion([null, null, null], 0);
+		const healed = plan.healed as string[];
+		expect(healed.every((key) => key > plan.insertKey)).toBe(true);
+	});
+
+	it("keeps a card dropped in the middle in the middle", () => {
+		const plan = planInsertion([null, null, null], 1);
+		const healed = plan.healed as string[];
+		expect(healed[0] < plan.insertKey).toBe(true);
+		expect(healed[1] > plan.insertKey).toBe(true);
+	});
+
+	it("handles the first card of an empty column", () => {
+		const plan = planInsertion([], 0);
+		expect(plan.insertKey).toBeTruthy();
+		expect(plan.healed).toEqual([]);
+	});
+
+	it("renumbers when only some keys are missing", () => {
+		const plan = planInsertion(["a1", null], 1);
+		expect(plan.healed.every((key) => key !== null)).toBe(true);
 	});
 });
 

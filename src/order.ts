@@ -1,4 +1,4 @@
-import { generateKeyBetween } from "fractional-indexing";
+import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 
 /** An order key usable as a bound, or null when the note has none. */
 export function sanitiseOrderKey(value: unknown): string | null {
@@ -46,6 +46,40 @@ export function keyBetween(before: string | null, after: string | null): string 
 export function insertKeyAt(neighbourKeys: (string | null)[], index: number): string {
 	const at = Math.max(0, Math.min(index, neighbourKeys.length));
 	return keyBetween(neighbourKeys[at - 1] ?? null, neighbourKeys[at] ?? null);
+}
+
+export interface OrderPlan {
+	/** Key to write on the card being inserted. */
+	insertKey: string;
+	/**
+	 * Replacement key per existing neighbour, in display order, or null where
+	 * that neighbour can keep the key it already has.
+	 */
+	healed: (string | null)[];
+}
+
+/**
+ * Works out the keys a drop implies.
+ *
+ * A column whose cards have no keys yet has no usable bounds: inserting a
+ * single key anywhere in it would sort that card above every keyless one,
+ * sending a card dropped at the bottom straight to the top. When any key is
+ * missing the whole column is renumbered in its current display order, which
+ * costs one write per card but only until the column has been ordered once.
+ */
+export function planInsertion(neighbourKeys: (string | null)[], index: number): OrderPlan {
+	const at = Math.max(0, Math.min(index, neighbourKeys.length));
+	if (neighbourKeys.every((key) => key !== null)) {
+		return {
+			insertKey: insertKeyAt(neighbourKeys, at),
+			healed: neighbourKeys.map(() => null),
+		};
+	}
+	const keys = generateNKeysBetween(null, null, neighbourKeys.length + 1);
+	return {
+		insertKey: keys[at],
+		healed: keys.filter((_, position) => position !== at),
+	};
 }
 
 /** Sorts by order key, sinking cards that have none to the bottom. */

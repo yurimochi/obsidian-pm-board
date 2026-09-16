@@ -25,7 +25,7 @@ import {
 	adjustIndexForRemoval,
 	compareOrderKeys,
 	insertionIndexAt,
-	insertKeyAt,
+	planInsertion,
 	sanitiseOrderKey,
 } from "./order";
 
@@ -160,7 +160,7 @@ export class BoardView extends BasesView {
 		const movedFrom = ordered.findIndex((entry) => entry.file.path === path);
 		const neighbours = ordered.filter((entry) => entry.file.path !== path);
 
-		const orderKey = insertKeyAt(
+		const plan = planInsertion(
 			neighbours.map((entry) => this.orderKeyOf(entry, config.orderProperty)),
 			adjustIndexForRemoval(dropIndex, movedFrom),
 		);
@@ -171,9 +171,19 @@ export class BoardView extends BasesView {
 			(frontmatter: Record<string, unknown>) => {
 				if (value === null) delete frontmatter[frontmatterKey];
 				else frontmatter[frontmatterKey] = value;
-				frontmatter[config.orderProperty] = orderKey;
+				frontmatter[config.orderProperty] = plan.insertKey;
 			},
 		);
+
+		for (const [position, healedKey] of plan.healed.entries()) {
+			if (healedKey === null) continue;
+			await this.app.fileManager.processFrontMatter(
+				neighbours[position].file,
+				(frontmatter: Record<string, unknown>) => {
+					frontmatter[config.orderProperty] = healedKey;
+				},
+			);
+		}
 	}
 
 	/**
