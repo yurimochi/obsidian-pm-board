@@ -78,12 +78,12 @@
 .pmb-column-header {
 	display: flex;
 	align-items: center;
-	gap: var(--size-4-1);
-	padding: var(--size-4-2) var(--size-4-1) var(--size-4-2) var(--size-4-2);
+	gap: var(--size-4-2);
+	padding: var(--size-4-3) var(--size-4-2) var(--size-4-3) var(--size-4-2);
 	font-weight: var(--font-semibold);
 	width: 100%;
 	color: var(--text-normal);
-	font-size: var(--font-ui-small);
+	font-size: var(--font-ui-medium);
 }
 
 /* A colour set on the column travels here rather than the header's own
@@ -128,7 +128,7 @@
 
 .pmb-column-chevron {
 	display: flex;
-	color: var(--text-faint);
+	color: var(--text-normal);
 }
 
 .pmb-column-title {
@@ -152,7 +152,7 @@
 .pmb-column-actions {
 	display: flex;
 	align-items: center;
-	gap: var(--size-2-1);
+	gap: var(--size-4-1);
 	flex: 0 0 auto;
 }
 
