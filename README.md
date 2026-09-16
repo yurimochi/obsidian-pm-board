@@ -76,11 +76,15 @@ Obsidian 1.10.2 or later, with Bases enabled.
 ## Development
 
 ```bash
-npm install
+npm ci          # install exactly what the lockfile pins
 npm run dev     # watch build
 npm run lint
 npm run build
 ```
+
+Use `npm ci` rather than `npm install`: the checked-in lockfile is what the
+build is verified against, and re-resolving it can produce a toolchain that
+accepts code a contributor's will reject.
 
 To test in a vault, copy `main.js`, `manifest.json`, and `styles.css` into
 `<vault>/.obsidian/plugins/pm-board/`.

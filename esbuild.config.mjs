@@ -9,7 +9,7 @@ const context = await esbuild.context({
 	bundle: true,
 	external: ["obsidian", "electron", ...builtins],
 	format: "cjs",
-	target: "es2018",
+	target: "es2020",
 	logLevel: "info",
 	sourcemap: production ? false : "inline",
 	treeShaking: true,
