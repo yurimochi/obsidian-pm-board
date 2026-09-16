@@ -31,7 +31,8 @@ These are the things PM-Board sets out to do differently:
 - [x] Drag and drop between columns, writing to frontmatter
 - [x] Manual card ordering
 - [x] Card property chips and tags
-- [ ] Card cover images
+- [x] Card cover images
+- [x] Adding cards from a column
 - [ ] Swimlanes (two-axis grouping)
 - [ ] Keyboard-driven card moves and ARIA semantics
 - [ ] Touch support and mobile layout

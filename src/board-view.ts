@@ -21,6 +21,7 @@ import {
 import { renderCard } from "./card";
 import { groupKeyOf, sortGroups } from "./column-order";
 import { BOARD_VIEW_TYPE } from "./constants";
+import { parseCoverReference } from "./cover";
 import { coerceGroupValue, frontmatterKeyOf } from "./frontmatter";
 import { resolveOpenTarget } from "./open-behavior";
 import {
@@ -98,6 +99,9 @@ export class BoardView extends BasesView {
 			this.renderDraggableCard(cardsEl, entry, config, properties);
 		}
 		this.registerDropTarget(cardsEl, key);
+
+		const addEl = columnEl.createEl("button", { cls: "pmb-add-card", text: "Add card" });
+		this.registerDomEvent(addEl, "click", () => void this.addCard(key, config));
 	}
 
 	private renderDraggableCard(
@@ -106,7 +110,14 @@ export class BoardView extends BasesView {
 		config: BoardConfig,
 		properties: BasesPropertyId[],
 	): void {
-		const cardEl = renderCard(cardsEl, entry, config, properties, this.renderContext);
+		const cardEl = renderCard(
+			cardsEl,
+			entry,
+			config,
+			properties,
+			this.renderContext,
+			(target) => this.coverSrcOf(target, config),
+		);
 		cardEl.draggable = true;
 
 		this.registerDomEvent(cardEl, "click", (event) => this.openEntry(entry, event, config));
@@ -141,6 +152,47 @@ export class BoardView extends BasesView {
 			const index = insertionIndexAt(cardBounds(cardsEl), event.clientY);
 			void this.moveCard(path, columnKey, index);
 		});
+	}
+
+	private coverSrcOf(entry: BasesEntry, config: BoardConfig): string | null {
+		if (!config.coverProperty) return null;
+		const reference = parseCoverReference(entry.getValue(config.coverProperty)?.toString());
+		if (!reference) return null;
+		if (reference.kind === "url") return reference.url;
+
+		const file = this.app.metadataCache.getFirstLinkpathDest(
+			reference.linkpath,
+			entry.file.path,
+		);
+		return file ? this.app.vault.getResourcePath(file) : null;
+	}
+
+	/**
+	 * Creates a note already belonging to the column it was added from, so it
+	 * does not land outside the board's own filter and vanish.
+	 */
+	private async addCard(columnKey: string | null, config: BoardConfig): Promise<void> {
+		const groupProperty = groupByPropertyOf(this.config);
+		const frontmatterKey = groupProperty ? frontmatterKeyOf(groupProperty) : null;
+
+		const group = this.data.groupedData.find((entry) => groupKeyOf(entry) === columnKey);
+		const ordered = group ? this.orderedEntries(group, config.orderProperty) : [];
+		const plan = planInsertion(
+			ordered.map((entry) => this.orderKeyOf(entry, config.orderProperty)),
+			config.newCardsToTop ? 0 : ordered.length,
+		);
+		const sample = frontmatterKey ? this.rawValue(ordered[0], frontmatterKey) : undefined;
+		const value = coerceGroupValue(columnKey, sample);
+
+		await this.createFileForView(undefined, (frontmatter: Record<string, unknown>) => {
+			// The board's own bookkeeping wins over configured defaults, so a
+			// default cannot place the new card outside the column it came from.
+			Object.assign(frontmatter, config.newItemProperties);
+			if (frontmatterKey && value !== null) frontmatter[frontmatterKey] = value;
+			frontmatter[config.orderProperty] = plan.insertKey;
+		});
+
+		await this.applyHealedKeys(plan.healed, ordered, config.orderProperty);
 	}
 
 	/** Collapsed state lives in the board file, so it survives reopening. */
@@ -219,12 +271,21 @@ export class BoardView extends BasesView {
 			},
 		);
 
-		for (const [position, healedKey] of plan.healed.entries()) {
-			if (healedKey === null) continue;
+		await this.applyHealedKeys(plan.healed, neighbours, config.orderProperty);
+	}
+
+	private async applyHealedKeys(
+		healed: (string | null)[],
+		entries: BasesEntry[],
+		orderProperty: string,
+	): Promise<void> {
+		for (const [position, key] of healed.entries()) {
+			const entry = entries[position];
+			if (key === null || !entry) continue;
 			await this.app.fileManager.processFrontMatter(
-				neighbours[position].file,
+				entry.file,
 				(frontmatter: Record<string, unknown>) => {
-					frontmatter[config.orderProperty] = healedKey;
+					frontmatter[orderProperty] = key;
 				},
 			);
 		}

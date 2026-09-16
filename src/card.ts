@@ -10,8 +10,18 @@ export function renderCard(
 	config: BoardConfig,
 	properties: BasesPropertyId[],
 	ctx: RenderContext,
+	resolveCover?: (entry: BasesEntry) => string | null,
 ): HTMLElement {
 	const cardEl = parentEl.createDiv({ cls: "pmb-card" });
+
+	const coverSrc = resolveCover?.(entry) ?? null;
+	if (coverSrc) {
+		const coverEl = cardEl.createEl("img", { cls: "pmb-card-cover" });
+		coverEl.src = coverSrc;
+		coverEl.alt = "";
+		coverEl.loading = "lazy";
+	}
+
 	cardEl.createDiv({ cls: "pmb-card-title", text: cardTitle(entry, config) });
 
 	const tags: string[] = [];
