@@ -16,6 +16,23 @@
 	border-radius: var(--radius-m);
 }
 
+.pmb-column-collapsed {
+	flex-basis: auto;
+}
+
+.pmb-column-collapsed .pmb-column-header {
+	flex-direction: column;
+	height: 100%;
+	padding: var(--size-4-3) var(--size-2-3);
+}
+
+/* Turned on its side so a collapsed column costs a strip rather than a slot. */
+.pmb-column-collapsed .pmb-column-title {
+	writing-mode: vertical-rl;
+	flex: 0 1 auto;
+	max-height: 100%;
+}
+
 .pmb-column-header {
 	display: flex;
 	align-items: center;

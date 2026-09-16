@@ -21,6 +21,11 @@ describe("groupKeyOf", () => {
 	it("stringifies the group key", () => {
 		expect(groupKeyOf(group("Todo"))).toBe("Todo");
 	});
+
+	it("treats a key that renders empty as no value", () => {
+		expect(groupKeyOf(group(""))).toBeNull();
+		expect(groupKeyOf(group("   "))).toBeNull();
+	});
 });
 
 describe("sortGroups", () => {

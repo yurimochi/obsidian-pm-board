@@ -1,9 +1,18 @@
 import type { BasesEntryGroup } from "obsidian";
 import { orderKey } from "./board-config";
 
-/** The group's key as text, or null for the group with no value. */
+/**
+ * The group's key as text, or null for the group with no value.
+ *
+ * A group can report having a key whose value still renders empty. That counts
+ * as the no-value column: the two settings that name it disagree (an empty
+ * string in the column order, a label in the collapsed set), so collapsing it
+ * only works if both spellings start from the same null.
+ */
 export function groupKeyOf(group: BasesEntryGroup): string | null {
-	return group.hasKey() && group.key ? group.key.toString() : null;
+	if (!group.hasKey() || !group.key) return null;
+	const text = group.key.toString().trim();
+	return text.length > 0 ? text : null;
 }
 
 /**
