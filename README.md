@@ -85,6 +85,10 @@ actions.
 
 On a narrow screen a column nearly fills the width and the board is swiped
 sideways between columns, so a column is readable rather than half visible.
+Each lane's row of columns keeps a fixed height and scrolls sideways on its
+own; scrolling to see more cards happens inside a column, not by scrolling
+the page — the same whether swimlanes are on or not. At wider sizes a laned
+board is still left to grow with its content instead.
 
 ## Card menu
 

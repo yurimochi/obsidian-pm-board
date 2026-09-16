@@ -7,6 +7,12 @@
 	padding: var(--size-4-3);
 }
 
+.pmb-lane {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+}
+
 .pmb-lane-columns {
 	display: flex;
 	gap: var(--size-4-3);
@@ -315,15 +321,33 @@
 @media (max-width: 600px) {
 	.pmb-board {
 		padding: var(--size-4-2);
+		overflow-y: hidden;
+	}
+
+	/* A lane's row of columns keeps a fixed height and scrolls sideways on
+	   its own, cards scrolling inside each column instead — the same
+	   whether swimlanes are on or not. At wider sizes a laned board is
+	   still left free to grow with its content (see above); this narrows
+	   that to phone-sized screens only. */
+	.pmb-lane {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.pmb-lane-columns {
+		flex: 1;
+		min-height: 0;
+		overflow-x: auto;
+		scroll-snap-type: x proximity;
+	}
+
+	.pmb-board-laned .pmb-column {
+		max-height: 100%;
 	}
 
 	.pmb-column {
 		flex-basis: min(86vw, 340px);
 		scroll-snap-align: start;
-	}
-
-	.pmb-lane-columns {
-		scroll-snap-type: x proximity;
 	}
 
 	.pmb-card-cover {
