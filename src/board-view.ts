@@ -105,7 +105,9 @@ export class BoardView extends BasesView {
 		this.registerDropTarget(cardsEl, key, ordered);
 
 		const addEl = columnEl.createEl("button", { cls: "pmb-add-card", text: "Add card" });
-		this.registerDomEvent(addEl, "click", () => void this.addCard(key, config, ordered));
+		this.registerDomEvent(addEl, "click", () =>
+			this.report(this.addCard(key, config, ordered), "Could not add the card."),
+		);
 	}
 
 	private renderDraggableCard(
@@ -158,7 +160,21 @@ export class BoardView extends BasesView {
 			if (!path) return;
 			event.preventDefault();
 			const index = insertionIndexAt(cardBounds(cardsEl), event.clientY);
-			void this.moveCard(path, columnKey, index, columnEntries);
+			this.report(
+				this.moveCard(path, columnKey, index, columnEntries),
+				"Could not move the card.",
+			);
+		});
+	}
+
+	/**
+	 * Card actions are started from event handlers, where a rejected promise
+	 * would otherwise be swallowed and the board would simply not change.
+	 */
+	private report(task: Promise<void>, message: string): void {
+		task.catch((error: unknown) => {
+			console.error(message, error);
+			new Notice(message);
 		});
 	}
 
@@ -245,9 +261,6 @@ export class BoardView extends BasesView {
 		dropIndex: number,
 		columnEntries: BasesEntry[],
 	): Promise<void> {
-		const file = this.app.vault.getFileByPath(path);
-		if (!file) return;
-
 		const config = readBoardConfig(this.config);
 		const groupProperty = groupByPropertyOf(this.config);
 		if (!groupProperty) {
@@ -283,14 +296,11 @@ export class BoardView extends BasesView {
 
 		await this.applyHealedKeys(plan.healed, neighbours, config.orderProperty);
 
-		await this.app.fileManager.processFrontMatter(
-			file,
-			(frontmatter: Record<string, unknown>) => {
-				if (value === null) delete frontmatter[frontmatterKey];
-				else frontmatter[frontmatterKey] = value;
-				frontmatter[config.orderProperty] = plan.insertKey;
-			},
-		);
+		await this.writeFrontMatter(path, (frontmatter) => {
+			if (value === null) delete frontmatter[frontmatterKey];
+			else frontmatter[frontmatterKey] = value;
+			frontmatter[config.orderProperty] = plan.insertKey;
+		});
 	}
 
 	private async applyHealedKeys(
@@ -301,13 +311,24 @@ export class BoardView extends BasesView {
 		for (const [position, key] of healed.entries()) {
 			const entry = entries[position];
 			if (key === null || !entry) continue;
-			await this.app.fileManager.processFrontMatter(
-				entry.file,
-				(frontmatter: Record<string, unknown>) => {
-					frontmatter[orderProperty] = key;
-				},
-			);
+			await this.writeFrontMatter(entry.file.path, (frontmatter) => {
+				frontmatter[orderProperty] = key;
+			});
 		}
+	}
+
+	/**
+	 * Query results are replaced as the vault changes and the file objects they
+	 * carry go stale with them, so the file is looked up again by path rather
+	 * than written through the reference a render happened to capture.
+	 */
+	private async writeFrontMatter(
+		path: string,
+		edit: (frontmatter: Record<string, unknown>) => void,
+	): Promise<void> {
+		const file = this.app.vault.getFileByPath(path);
+		if (!file) throw new Error(`PM-Board: no file at ${path}`);
+		await this.app.fileManager.processFrontMatter(file, edit);
 	}
 
 	/**
