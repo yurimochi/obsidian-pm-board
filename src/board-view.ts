@@ -39,7 +39,7 @@ export class BoardView extends BasesView {
 	private readonly renderContext: RenderContext = { hoverPopover: null };
 
 	constructor(
-		controller: QueryController,
+		private readonly controller: QueryController,
 		private readonly containerEl: HTMLElement,
 	) {
 		super(controller);
@@ -153,7 +153,32 @@ export class BoardView extends BasesView {
 		if (!collapsed) next[storageKey] = true;
 
 		this.config.set("collapsedColumns", Object.keys(next).length > 0 ? next : null);
+		this.logPersistenceSurface();
 		this.onDataUpdated();
+	}
+
+	/**
+	 * Collapsing does not survive reopening the board, so the call that stores it
+	 * is not reaching the file. The typed surface exposes no way to persist, so
+	 * this reports what the objects actually carry at runtime.
+	 */
+	private logPersistenceSurface(): void {
+		const methodsOf = (value: object): string[] => {
+			const names = new Set<string>();
+			let current: object | null = Object.getPrototypeOf(value) as object | null;
+			while (current && current !== Object.prototype) {
+				for (const name of Object.getOwnPropertyNames(current)) names.add(name);
+				current = Object.getPrototypeOf(current) as object | null;
+			}
+			return [...names];
+		};
+
+		console.error("PM-Board persistence surface", {
+			configMethods: methodsOf(this.config),
+			configFields: Object.keys(this.config),
+			controllerMethods: methodsOf(this.controller),
+			controllerFields: Object.keys(this.controller),
+		});
 	}
 
 	private async moveCard(
