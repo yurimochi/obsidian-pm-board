@@ -249,13 +249,15 @@
 	background-color: var(--pmb-tag-color);
 }
 
-/* Chosen per tag by contrast against its own colour, not by the app theme. */
+/* Chosen per tag by contrast against its own colour, not by the app theme,
+   so these cannot come from the theme's text variables. A theme that wants
+   different extremes can still override the two below. */
 .pmb-tag-on-light {
-	color: #fff;
+	color: var(--pmb-tag-text-light, #fff);
 }
 
 .pmb-tag-on-dark {
-	color: #000;
+	color: var(--pmb-tag-text-dark, #000);
 }
 
 .pmb-chip {

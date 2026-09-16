@@ -3,7 +3,7 @@
 	"name": "PM-Board",
 	"version": "0.1.0",
 	"minAppVersion": "1.10.2",
-	"description": "Project management board views for Bases: kanban columns, swimlanes, and keyboard-driven card moves.",
+	"description": "Board views for Bases: group notes into columns, split them across swimlanes, and drag cards to update their properties.",
 	"author": "Yurimochi",
 	"authorUrl": "https://github.com/yurimochi",
 	"isDesktopOnly": false

@@ -117,6 +117,11 @@ displace a card from the column it was added from.
   by tests, but the wiring between a keypress and the board has not been
   exercised in a running vault. Treat it as unfinished.
 - **Touch dragging is not implemented**, deliberately; use the card menu.
+- **Persisting a collapsed column relies on an undocumented call.** The typed
+  API offers no way to tell the host that a view's stored settings changed, so
+  the plugin looks one up on the query controller at runtime. It is never
+  assumed to exist: without it a column still collapses, it just forgets on
+  reopen. Nothing else in the plugin reaches past the public API.
 
 ## Card order
 
