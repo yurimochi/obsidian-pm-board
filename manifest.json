@@ -1,0 +1,10 @@
+{
+	"id": "pm-board",
+	"name": "PM-Board",
+	"version": "0.1.0",
+	"minAppVersion": "1.10.2",
+	"description": "Project management board views for Bases: kanban columns, swimlanes, and keyboard-driven card moves.",
+	"author": "Yurimochi",
+	"authorUrl": "https://github.com/yurimochi",
+	"isDesktopOnly": false
+}
