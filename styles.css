@@ -95,7 +95,7 @@
 .pmb-column-drag-handle {
 	display: flex;
 	align-items: center;
-	color: var(--text-faint);
+	color: var(--text-muted);
 	cursor: grab;
 }
 
@@ -128,7 +128,7 @@
 
 .pmb-column-chevron {
 	display: flex;
-	color: var(--text-normal);
+	color: var(--text-muted);
 }
 
 .pmb-column-title {
@@ -165,7 +165,7 @@
 	background: none;
 	border: none;
 	box-shadow: none;
-	color: var(--text-faint);
+	color: var(--text-muted);
 	cursor: pointer;
 	border-radius: var(--radius-s);
 }
@@ -173,7 +173,6 @@
 .pmb-column-add:hover,
 .pmb-column-menu:hover {
 	background-color: var(--background-modifier-hover);
-	color: var(--text-normal);
 }
 
 .pmb-lane-columns-drop-target {
