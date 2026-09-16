@@ -132,3 +132,20 @@ export function insertionIndexAt(
 	}
 	return cards.length;
 }
+
+/** The column position a pointer at `clientX` should insert into. */
+export function columnInsertionIndexAt(
+	columns: { left: number; width: number }[],
+	clientX: number,
+): number {
+	for (let index = 0; index < columns.length; index++) {
+		const { left, width } = columns[index];
+		if (clientX < left + width / 2) return index;
+	}
+	return columns.length;
+}
+
+/** Where a dragged column lands once its own slot is removed from the row. */
+export function reorderIndexFor(targetIndex: number, movedFrom: number): number {
+	return movedFrom < targetIndex ? targetIndex - 1 : targetIndex;
+}

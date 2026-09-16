@@ -2,6 +2,7 @@ import {
 	BasesEntry,
 	BasesPropertyId,
 	BasesView,
+	DateValue,
 	Keymap,
 	Menu,
 	moment,
@@ -9,6 +10,7 @@ import {
 	Notice,
 	QueryController,
 	RenderContext,
+	setIcon,
 } from "obsidian";
 import {
 	BoardConfig,
@@ -19,6 +21,10 @@ import {
 	lookupColumn,
 	NO_VALUE_COLLAPSE_KEY,
 	readBoardConfig,
+	removeColumnSettings,
+	renameColumnKey,
+	setColumnMapValue,
+	setColumnOrder,
 } from "./board-config";
 import { cardTitle, renderCard } from "./card";
 import { CardDetailModal } from "./card-detail-modal";
@@ -37,11 +43,14 @@ import {
 import { OpenModifiers, resolveOpenTarget } from "./open-behavior";
 import {
 	adjustIndexForRemoval,
+	columnInsertionIndexAt,
 	insertionIndexAt,
 	planInsertion,
+	reorderIndexFor,
 	resolveOrderKey,
 	sortByOrderKey,
 } from "./order";
+import { PromptModal } from "./prompt-modal";
 import { buildLanes, Lane, LaneColumn } from "./swimlanes";
 import { applyPlaceholders, joinPath, uniqueName } from "./template";
 
@@ -51,6 +60,10 @@ export class BoardView extends BasesView {
 	private boardEl: HTMLElement | null = null;
 	private liveEl: HTMLElement | null = null;
 	private draggedPath: string | null = null;
+	/** Index of the column being dragged into a new position; -1 while none is. */
+	private draggedColumnIndex = -1;
+	/** Whether the board's groupBy property is a date, which cannot be renamed. */
+	private dateGrouped = false;
 	private lanes: Lane[] = [];
 	/** Card to focus once the board has redrawn after a keyboard move. */
 	private pendingFocus: string | null = null;
@@ -93,8 +106,13 @@ export class BoardView extends BasesView {
 		const properties = this.config.getOrder();
 		const laneProperty = config.swimlaneProperty;
 
+		const groups = sortGroups(this.data.groupedData, config.boardColumns);
+		// A date's canonical value isn't something a user can meaningfully type
+		// in as a new column name, so rename and drag-reorder are both off.
+		this.dateGrouped = groups.some((group) => group.hasKey() && group.key instanceof DateValue);
+
 		const lanes = buildLanes(
-			sortGroups(this.data.groupedData, config.boardColumns),
+			groups,
 			groupKeyOf,
 			laneProperty ? (entry) => textValueOf(entry, laneProperty) : null,
 		);
@@ -163,6 +181,7 @@ export class BoardView extends BasesView {
 				column: columnIndex,
 			});
 		});
+		this.registerColumnDropTarget(columnsEl);
 	}
 
 	private renderColumn(
@@ -176,6 +195,7 @@ export class BoardView extends BasesView {
 		const key = column.key;
 		const collapsed = config.collapsedColumns.has(collapseKey(key));
 		const limit = lookupColumn(config.wipLimits, key);
+		const color = lookupColumn(config.columnColors, key);
 
 		const columnEl = parentEl.createDiv({ cls: "pmb-column" });
 		columnEl.setAttribute("role", "group");
@@ -185,24 +205,25 @@ export class BoardView extends BasesView {
 			"pmb-column-over-limit",
 			limit !== null && column.entries.length > limit,
 		);
-
-		const headerEl = columnEl.createEl("button", { cls: "pmb-column-header" });
-		headerEl.setAttribute("aria-expanded", String(!collapsed));
-		headerEl.createSpan({ cls: "pmb-column-title", text: key ?? NO_VALUE_COLLAPSE_KEY });
-		headerEl.createSpan({
-			cls: "pmb-column-count",
-			text:
-				limit === null
-					? String(column.entries.length)
-					: `${column.entries.length}/${limit}`,
-		});
-		this.registerDomEvent(headerEl, "click", () => this.toggleColumn(key, collapsed));
-
-		if (collapsed) return;
+		columnEl.toggleClass("pmb-column-colored", color !== null);
+		if (color) columnEl.style.setProperty("--pmb-column-color", color);
 
 		const ordered = sortByOrderKey(column.entries, (entry) =>
 			this.orderKeyOf(entry, config.orderProperty),
 		);
+
+		this.renderColumnHeader(
+			columnEl,
+			column,
+			ordered,
+			config,
+			laneKey,
+			collapsed,
+			limit,
+			at.column,
+		);
+
+		if (collapsed) return;
 
 		const cardsEl = columnEl.createDiv({ cls: "pmb-cards" });
 		cardsEl.setAttribute("role", "list");
@@ -213,10 +234,68 @@ export class BoardView extends BasesView {
 			});
 		});
 		this.registerDropTarget(cardsEl, key, ordered, laneKey);
+	}
 
-		const addEl = columnEl.createEl("button", { cls: "pmb-add-card", text: "Add card" });
+	private renderColumnHeader(
+		columnEl: HTMLElement,
+		column: LaneColumn,
+		ordered: BasesEntry[],
+		config: BoardConfig,
+		laneKey: string | null,
+		collapsed: boolean,
+		limit: number | null,
+		columnIndex: number,
+	): void {
+		const key = column.key;
+		const headerEl = columnEl.createDiv({ cls: "pmb-column-header" });
+
+		if (!this.dateGrouped) {
+			const handleEl = headerEl.createSpan({ cls: "pmb-column-drag-handle" });
+			setIcon(handleEl, "lucide-grip-vertical");
+			handleEl.setAttribute("aria-hidden", "true");
+			handleEl.setAttribute("tabindex", "-1");
+			handleEl.draggable = true;
+			this.registerDomEvent(handleEl, "dragstart", (event) => {
+				this.draggedColumnIndex = columnIndex;
+				columnEl.addClass("pmb-column-dragging");
+				event.dataTransfer?.setData("text/plain", key ?? "");
+				if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+			});
+			this.registerDomEvent(handleEl, "dragend", () => {
+				this.draggedColumnIndex = -1;
+				columnEl.removeClass("pmb-column-dragging");
+			});
+		}
+
+		const toggleEl = headerEl.createEl("button", { cls: "pmb-column-toggle" });
+		toggleEl.setAttribute("aria-expanded", String(!collapsed));
+		setIcon(
+			toggleEl.createSpan({ cls: "pmb-column-chevron" }),
+			collapsed ? "lucide-chevron-right" : "lucide-chevron-down",
+		);
+		toggleEl.createSpan({ cls: "pmb-column-title", text: key ?? NO_VALUE_COLLAPSE_KEY });
+		toggleEl.createSpan({
+			cls: "pmb-column-count",
+			text:
+				limit === null
+					? String(column.entries.length)
+					: `${column.entries.length}/${limit}`,
+		});
+		this.registerDomEvent(toggleEl, "click", () => this.toggleColumn(key, collapsed));
+
+		const actionsEl = headerEl.createDiv({ cls: "pmb-column-actions" });
+		const addEl = actionsEl.createEl("button", { cls: "pmb-column-add" });
+		addEl.setAttribute("aria-label", "Add card");
+		setIcon(addEl, "lucide-plus");
 		this.registerDomEvent(addEl, "click", () =>
 			this.report(this.addCard(key, config, ordered, laneKey), "Could not add the card."),
+		);
+
+		const menuEl = actionsEl.createEl("button", { cls: "pmb-column-menu" });
+		menuEl.setAttribute("aria-label", "Column options");
+		setIcon(menuEl, "lucide-more-horizontal");
+		this.registerDomEvent(menuEl, "click", (event) =>
+			this.showColumnMenu(event, column, config),
 		);
 	}
 
@@ -295,6 +374,206 @@ export class BoardView extends BasesView {
 				"Could not move the card.",
 			);
 		});
+	}
+
+	private registerColumnDropTarget(columnsEl: HTMLElement): void {
+		this.registerDomEvent(columnsEl, "dragover", (event) => {
+			if (this.draggedColumnIndex === -1) return;
+			event.preventDefault();
+			if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+			columnsEl.addClass("pmb-lane-columns-drop-target");
+		});
+		this.registerDomEvent(columnsEl, "dragleave", () => {
+			columnsEl.removeClass("pmb-lane-columns-drop-target");
+		});
+		this.registerDomEvent(columnsEl, "drop", (event) => {
+			columnsEl.removeClass("pmb-lane-columns-drop-target");
+			const movedFrom = this.draggedColumnIndex;
+			if (movedFrom === -1) return;
+			event.preventDefault();
+			const target = columnInsertionIndexAt(columnBounds(columnsEl), event.clientX);
+			this.moveColumn(movedFrom, reorderIndexFor(target, movedFrom));
+		});
+	}
+
+	/** Every lane shares the same columns in the same order, so any one names the board-wide order. */
+	private moveColumn(fromIndex: number, toIndex: number): void {
+		const order = this.lanes[0]?.columns.map((c) => c.key) ?? [];
+		if (fromIndex === toIndex || fromIndex < 0 || fromIndex >= order.length) return;
+		const next = [...order];
+		const [moved] = next.splice(fromIndex, 1);
+		next.splice(toIndex, 0, moved);
+		setColumnOrder(this.config, next);
+		if (!this.notifyConfigChanged()) this.onDataUpdated();
+	}
+
+	private showColumnMenu(event: MouseEvent, column: LaneColumn, config: BoardConfig): void {
+		const menu = new Menu();
+		const key = column.key;
+		const groupProperty = groupByPropertyOf(this.config);
+		// A lane only holds its own slice of a column; rename and delete are
+		// about the column as a whole, so they need every lane's share of it.
+		const allEntries = this.entriesForColumn(key);
+
+		if (!this.dateGrouped) {
+			menu.addItem((item) =>
+				item
+					.setTitle("Rename column")
+					.setIcon("lucide-pencil")
+					.onClick(() =>
+						this.report(
+							this.renameColumn(key, allEntries, groupProperty),
+							"Could not rename the column.",
+						),
+					),
+			);
+		}
+
+		menu.addItem((item) =>
+			item
+				.setTitle("Change color")
+				.setIcon("lucide-palette")
+				.onClick(() =>
+					this.report(
+						this.changeColumnColor(key, config),
+						"Could not change the column's color.",
+					),
+				),
+		);
+
+		menu.addItem((item) =>
+			item
+				.setTitle("Set WIP limit")
+				.setIcon("lucide-gauge")
+				.onClick(() =>
+					this.report(
+						this.setColumnWipLimit(key, config),
+						"Could not set the WIP limit.",
+					),
+				),
+		);
+
+		menu.addSeparator();
+		const count = allEntries.length;
+		menu.addItem((item) =>
+			item
+				.setTitle(`Delete column (${count} card${count === 1 ? "" : "s"} will remain)`)
+				.setIcon("lucide-trash-2")
+				.onClick(() =>
+					this.report(
+						this.deleteColumn(key, allEntries, groupProperty),
+						"Could not delete the column.",
+					),
+				),
+		);
+
+		menu.showAtMouseEvent(event);
+	}
+
+	/** A column's cards across every lane, since renaming or deleting it is not about one swimlane's slice. */
+	private entriesForColumn(key: string | null): BasesEntry[] {
+		return this.lanes.flatMap((lane) => lane.columns.find((c) => c.key === key)?.entries ?? []);
+	}
+
+	/**
+	 * Renaming writes the new value to every card's frontmatter, since a
+	 * column is just a value of the grouped property, not a setting of its
+	 * own. Its stored WIP limit, colour, collapse state and manual order
+	 * position all follow it to the new key.
+	 */
+	private async renameColumn(
+		key: string | null,
+		entries: BasesEntry[],
+		groupProperty: string | null,
+	): Promise<void> {
+		const frontmatterKey = this.writableGroupKey(groupProperty, "renamed");
+		if (!frontmatterKey) return;
+
+		const next = await PromptModal.prompt(this.app, {
+			title: "Rename column",
+			initialValue: key ?? "",
+			placeholder: "Column name",
+		});
+		if (next === null || next === "" || next === (key ?? "")) return;
+
+		const value = coerceGroupValue(next, this.rawValue(entries[0], frontmatterKey));
+		for (const entry of entries) {
+			await this.writeFrontMatter(entry.file.path, (frontmatter) =>
+				assign(frontmatter, frontmatterKey, value),
+			);
+		}
+		renameColumnKey(this.config, key, next);
+		if (!this.notifyConfigChanged()) this.onDataUpdated();
+	}
+
+	private async changeColumnColor(key: string | null, config: BoardConfig): Promise<void> {
+		const current = lookupColumn(config.columnColors, key);
+		const next = await PromptModal.prompt(this.app, {
+			title: "Change color",
+			initialValue: current ?? "#3d64ff",
+			inputType: "color",
+			showClear: true,
+			clearLabel: "Remove color",
+		});
+		if (next === null) return;
+		setColumnMapValue(this.config, "columnColors", key, next === "" ? null : next);
+		if (!this.notifyConfigChanged()) this.onDataUpdated();
+	}
+
+	private async setColumnWipLimit(key: string | null, config: BoardConfig): Promise<void> {
+		const current = lookupColumn(config.wipLimits, key);
+		const next = await PromptModal.prompt(this.app, {
+			title: "Set WIP limit",
+			initialValue: current !== null ? String(current) : "",
+			placeholder: "No limit",
+			inputType: "number",
+		});
+		if (next === null) return;
+		if (next === "") {
+			setColumnMapValue(this.config, "wipLimits", key, null);
+		} else {
+			const parsed = Number(next);
+			if (!Number.isInteger(parsed) || parsed < 0) {
+				new Notice("WIP limit must be a whole number, zero or more.");
+				return;
+			}
+			setColumnMapValue(this.config, "wipLimits", key, parsed);
+		}
+		if (!this.notifyConfigChanged()) this.onDataUpdated();
+	}
+
+	/** Deleting a column clears the grouped property on its cards; it does not delete the notes. */
+	private async deleteColumn(
+		key: string | null,
+		entries: BasesEntry[],
+		groupProperty: string | null,
+	): Promise<void> {
+		const frontmatterKey = this.writableGroupKey(groupProperty, "updated");
+		if (!frontmatterKey) return;
+
+		for (const entry of entries) {
+			await this.writeFrontMatter(entry.file.path, (frontmatter) => {
+				delete frontmatter[frontmatterKey];
+			});
+		}
+		removeColumnSettings(this.config, key);
+		if (!this.notifyConfigChanged()) this.onDataUpdated();
+	}
+
+	/** The frontmatter key backing the board's columns, or null (with a Notice) when cards cannot be written to. */
+	private writableGroupKey(groupProperty: string | null, verb: string): string | null {
+		if (!groupProperty) {
+			new Notice("Could not tell which property this board groups by.");
+			return null;
+		}
+		const frontmatterKey = frontmatterKeyOf(groupProperty);
+		if (!frontmatterKey) {
+			new Notice(
+				`Cards cannot be ${verb}: this board groups by ${groupProperty}, which is computed.`,
+			);
+			return null;
+		}
+		return frontmatterKey;
 	}
 
 	/**
@@ -745,5 +1024,12 @@ function cardBounds(cardsEl: HTMLElement): { top: number; height: number }[] {
 	return Array.from(cardsEl.children).map((child) => {
 		const rect = child.getBoundingClientRect();
 		return { top: rect.top, height: rect.height };
+	});
+}
+
+function columnBounds(columnsEl: HTMLElement): { left: number; width: number }[] {
+	return Array.from(columnsEl.children).map((child) => {
+		const rect = child.getBoundingClientRect();
+		return { left: rect.left, width: rect.width };
 	});
 }

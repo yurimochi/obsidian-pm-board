@@ -31,6 +31,8 @@ export interface BoardConfig {
 	tagColors: Map<string, string>;
 	/** Column key to work-in-progress limit. */
 	wipLimits: Map<string, number>;
+	/** Column key to header accent colour, hex. */
+	columnColors: Map<string, string>;
 	/** Property used as the card heading instead of the filename. */
 	cardTitleProperty: BasesPropertyId | null;
 	/** Property holding the card's cover image. */
@@ -61,6 +63,7 @@ export function readBoardConfig(config: BasesViewConfig): BoardConfig {
 		boardColumns: readStringArray(config, "boardColumns"),
 		tagColors: readStringMap(config, "tagColors"),
 		wipLimits: readNumberMap(config, "wipLimits"),
+		columnColors: readStringMap(config, "columnColors"),
 		cardTitleProperty: config.getAsPropertyId("cardTitleProperty"),
 		coverProperty: config.getAsPropertyId("coverProperty"),
 		swimlaneProperty: config.getAsPropertyId("swimlaneProperty"),
@@ -131,6 +134,85 @@ export function orderKey(groupKey: string | null): string {
  */
 export function lookupColumn<T>(map: Map<string, T>, groupKey: string | null): T | null {
 	return map.get(collapseKey(groupKey)) ?? map.get(orderKey(groupKey)) ?? null;
+}
+
+export type ColumnMapSetting = "wipLimits" | "columnColors";
+
+/** Sets or clears one column's entry in a per-column map setting (WIP limits, colours). */
+export function setColumnMapValue(
+	config: BasesViewConfig,
+	setting: ColumnMapSetting,
+	groupKey: string | null,
+	value: string | number | null,
+): void {
+	const raw = readRawMap(config, setting);
+	const key = collapseKey(groupKey);
+	if (value === null) delete raw[key];
+	else raw[key] = value;
+	config.set(setting, Object.keys(raw).length > 0 ? raw : null);
+}
+
+/** Overwrites the board's saved column order, used once a drag reorders the columns themselves. */
+export function setColumnOrder(config: BasesViewConfig, order: (string | null)[]): void {
+	config.set("boardColumns", order.map(orderKey));
+}
+
+/** Removes a column from every per-column setting, once its cards have moved elsewhere. */
+export function removeColumnSettings(config: BasesViewConfig, groupKey: string | null): void {
+	setColumnMapValue(config, "wipLimits", groupKey, null);
+	setColumnMapValue(config, "columnColors", groupKey, null);
+	removeMapEntry(config, "collapsedColumns", collapseKey(groupKey));
+	removeFromOrder(config, groupKey);
+}
+
+/**
+ * Re-keys a column's stored settings after a rename, so its WIP limit, colour,
+ * collapse state and place in the manual order all follow the new value
+ * instead of silently applying to whatever next takes the old one.
+ */
+export function renameColumnKey(config: BasesViewConfig, from: string | null, to: string): void {
+	renameMapEntry(config, "wipLimits", collapseKey(from), collapseKey(to));
+	renameMapEntry(config, "columnColors", collapseKey(from), collapseKey(to));
+	renameMapEntry(config, "collapsedColumns", collapseKey(from), collapseKey(to));
+	renameInOrder(config, from, to);
+}
+
+function readRawMap(config: BasesViewConfig, key: string): Record<string, unknown> {
+	const value = config.get(key);
+	return isPlainObject(value) ? { ...value } : {};
+}
+
+function removeMapEntry(config: BasesViewConfig, setting: string, key: string): void {
+	const raw = readRawMap(config, setting);
+	if (!(key in raw)) return;
+	delete raw[key];
+	config.set(setting, Object.keys(raw).length > 0 ? raw : null);
+}
+
+function renameMapEntry(config: BasesViewConfig, setting: string, from: string, to: string): void {
+	const raw = readRawMap(config, setting);
+	if (!(from in raw)) return;
+	const value = raw[from];
+	delete raw[from];
+	raw[to] = value;
+	config.set(setting, raw);
+}
+
+function removeFromOrder(config: BasesViewConfig, groupKey: string | null): void {
+	const order = readStringArray(config, "boardColumns");
+	if (!order) return;
+	const next = order.filter((key) => key !== orderKey(groupKey));
+	config.set("boardColumns", next.length > 0 ? next : null);
+}
+
+function renameInOrder(config: BasesViewConfig, from: string | null, to: string): void {
+	const order = readStringArray(config, "boardColumns");
+	if (!order) return;
+	const fromKey = orderKey(from);
+	config.set(
+		"boardColumns",
+		order.map((key) => (key === fromKey ? orderKey(to) : key)),
+	);
 }
 
 function readString(config: BasesViewConfig, key: string): string | null {

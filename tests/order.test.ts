@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
 	adjustIndexForRemoval,
+	columnInsertionIndexAt,
 	compareOrderKeys,
 	insertionIndexAt,
 	insertKeyAt,
 	keyBetween,
 	planInsertion,
+	reorderIndexFor,
 	resolveOrderKey,
 	sanitiseOrderKey,
 	sortByOrderKey,
@@ -223,5 +225,45 @@ describe("insertionIndexAt", () => {
 
 	it("returns the first position for an empty column", () => {
 		expect(insertionIndexAt([], 50)).toBe(0);
+	});
+});
+
+describe("columnInsertionIndexAt", () => {
+	const columns = [
+		{ left: 0, width: 200 },
+		{ left: 200, width: 200 },
+		{ left: 400, width: 200 },
+	];
+
+	it("inserts before a column while over its left half", () => {
+		expect(columnInsertionIndexAt(columns, 20)).toBe(0);
+		expect(columnInsertionIndexAt(columns, 240)).toBe(1);
+	});
+
+	it("inserts after a column once past its midpoint", () => {
+		expect(columnInsertionIndexAt(columns, 120)).toBe(1);
+		expect(columnInsertionIndexAt(columns, 520)).toBe(3);
+	});
+
+	it("appends when to the right of every column", () => {
+		expect(columnInsertionIndexAt(columns, 9999)).toBe(3);
+	});
+
+	it("returns the first position for an empty row", () => {
+		expect(columnInsertionIndexAt([], 50)).toBe(0);
+	});
+});
+
+describe("reorderIndexFor", () => {
+	it("leaves the target alone when the column came from later in the row", () => {
+		expect(reorderIndexFor(1, 3)).toBe(1);
+	});
+
+	it("shifts left once the moved column's own slot is removed", () => {
+		expect(reorderIndexFor(3, 1)).toBe(2);
+	});
+
+	it("is a no-op when the column would land back where it started", () => {
+		expect(reorderIndexFor(1, 1)).toBe(1);
 	});
 });

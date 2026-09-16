@@ -6,12 +6,19 @@ import {
 	lookupColumn,
 	orderKey,
 	readBoardConfig,
+	removeColumnSettings,
+	renameColumnKey,
+	setColumnMapValue,
+	setColumnOrder,
 } from "../src/board-config";
 
 /** Minimal stand-in for BasesViewConfig backed by a plain object. */
 function fakeConfig(raw: Record<string, unknown>) {
 	return {
 		get: (key: string) => raw[key],
+		set: (key: string, value: unknown) => {
+			raw[key] = value;
+		},
 		getAsPropertyId: (key: string) => (typeof raw[key] === "string" ? raw[key] : null),
 	} as never;
 }
@@ -181,5 +188,89 @@ describe("no-value column keys", () => {
 	it("passes real keys through unchanged", () => {
 		expect(collapseKey("Todo")).toBe("Todo");
 		expect(orderKey("Todo")).toBe("Todo");
+	});
+});
+
+describe("setColumnMapValue", () => {
+	it("sets a column's entry, keyed the same way collapsedColumns is", () => {
+		const raw: Record<string, unknown> = {};
+		setColumnMapValue(fakeConfig(raw), "wipLimits", "Todo", 5);
+		expect(raw.wipLimits).toEqual({ Todo: 5 });
+	});
+
+	it("uses the no-value spelling for a null column", () => {
+		const raw: Record<string, unknown> = {};
+		setColumnMapValue(fakeConfig(raw), "columnColors", null, "#3d64ff");
+		expect(raw.columnColors).toEqual({ "(No value)": "#3d64ff" });
+	});
+
+	it("clears one entry without disturbing the others", () => {
+		const raw: Record<string, unknown> = { wipLimits: { Todo: 5, Doing: 3 } };
+		setColumnMapValue(fakeConfig(raw), "wipLimits", "Todo", null);
+		expect(raw.wipLimits).toEqual({ Doing: 3 });
+	});
+
+	it("clears the setting entirely once its last entry is removed", () => {
+		const raw: Record<string, unknown> = { wipLimits: { Todo: 5 } };
+		setColumnMapValue(fakeConfig(raw), "wipLimits", "Todo", null);
+		expect(raw.wipLimits).toBeNull();
+	});
+});
+
+describe("setColumnOrder", () => {
+	it("writes the order, translating the no-value column", () => {
+		const raw: Record<string, unknown> = {};
+		setColumnOrder(fakeConfig(raw), ["Todo", null, "Done"]);
+		expect(raw.boardColumns).toEqual(["Todo", "", "Done"]);
+	});
+});
+
+describe("removeColumnSettings", () => {
+	it("removes a column from every per-column setting", () => {
+		const raw: Record<string, unknown> = {
+			wipLimits: { Todo: 5, Doing: 3 },
+			columnColors: { Todo: "#3d64ff" },
+			collapsedColumns: { Todo: true, Doing: true },
+			boardColumns: ["Todo", "Doing", "Done"],
+		};
+		removeColumnSettings(fakeConfig(raw), "Todo");
+		expect(raw.wipLimits).toEqual({ Doing: 3 });
+		expect(raw.columnColors).toBeNull();
+		expect(raw.collapsedColumns).toEqual({ Doing: true });
+		expect(raw.boardColumns).toEqual(["Doing", "Done"]);
+	});
+
+	it("does nothing to settings the column never had", () => {
+		const raw: Record<string, unknown> = { wipLimits: { Doing: 3 } };
+		removeColumnSettings(fakeConfig(raw), "Todo");
+		expect(raw.wipLimits).toEqual({ Doing: 3 });
+	});
+});
+
+describe("renameColumnKey", () => {
+	it("moves a column's entries to its new key", () => {
+		const raw: Record<string, unknown> = {
+			wipLimits: { Todo: 5 },
+			columnColors: { Todo: "#3d64ff" },
+			collapsedColumns: { Todo: true },
+			boardColumns: ["Todo", "Doing"],
+		};
+		renameColumnKey(fakeConfig(raw), "Todo", "Backlog");
+		expect(raw.wipLimits).toEqual({ Backlog: 5 });
+		expect(raw.columnColors).toEqual({ Backlog: "#3d64ff" });
+		expect(raw.collapsedColumns).toEqual({ Backlog: true });
+		expect(raw.boardColumns).toEqual(["Backlog", "Doing"]);
+	});
+
+	it("renames the no-value column", () => {
+		const raw: Record<string, unknown> = { boardColumns: ["", "Doing"] };
+		renameColumnKey(fakeConfig(raw), null, "Unsorted");
+		expect(raw.boardColumns).toEqual(["Unsorted", "Doing"]);
+	});
+
+	it("leaves settings alone for a column that had none", () => {
+		const raw: Record<string, unknown> = { wipLimits: { Doing: 3 } };
+		renameColumnKey(fakeConfig(raw), "Todo", "Backlog");
+		expect(raw.wipLimits).toEqual({ Doing: 3 });
 	});
 });

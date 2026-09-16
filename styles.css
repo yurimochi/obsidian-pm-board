@@ -51,10 +51,21 @@
 	flex-basis: auto;
 }
 
+.pmb-column-collapsed .pmb-column-drag-handle,
+.pmb-column-collapsed .pmb-column-actions {
+	display: none;
+}
+
 .pmb-column-collapsed .pmb-column-header {
-	flex-direction: column;
 	height: 100%;
 	padding: var(--size-4-3) var(--size-2-3);
+}
+
+.pmb-column-collapsed .pmb-column-toggle {
+	flex-direction: column;
+	height: 100%;
+	margin: 0;
+	padding: 0;
 }
 
 /* Turned on its side so a collapsed column costs a strip rather than a slot. */
@@ -67,21 +78,57 @@
 .pmb-column-header {
 	display: flex;
 	align-items: center;
-	gap: var(--size-4-2);
-	padding: var(--size-4-2) var(--size-4-3);
+	gap: var(--size-4-1);
+	padding: var(--size-4-2) var(--size-4-1) var(--size-4-2) var(--size-4-2);
 	font-weight: var(--font-semibold);
 	width: 100%;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+}
+
+/* A colour set on the column travels here rather than the header's own
+   background, so it reads as an accent rather than fighting the theme. */
+.pmb-column-colored {
+	box-shadow: inset 0 3px 0 0 var(--pmb-column-color);
+}
+
+.pmb-column-drag-handle {
+	display: flex;
+	align-items: center;
+	color: var(--text-faint);
+	cursor: grab;
+}
+
+.pmb-column-dragging {
+	opacity: 0.4;
+}
+
+.pmb-column-toggle {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	flex: 1;
+	min-width: 0;
+	padding: var(--size-2-2);
+	margin: calc(var(--size-2-2) * -1);
 	background: none;
 	border: none;
 	box-shadow: none;
-	color: var(--text-normal);
-	font-size: var(--font-ui-small);
+	color: inherit;
+	font: inherit;
+	font-weight: inherit;
 	text-align: left;
 	cursor: pointer;
+	border-radius: var(--radius-s);
 }
 
-.pmb-column-header:hover {
+.pmb-column-toggle:hover {
 	background-color: var(--background-modifier-hover);
+}
+
+.pmb-column-chevron {
+	display: flex;
+	color: var(--text-faint);
 }
 
 .pmb-column-title {
@@ -100,6 +147,38 @@
 .pmb-column-over-limit .pmb-column-count {
 	color: var(--text-error);
 	font-weight: var(--font-bold);
+}
+
+.pmb-column-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-1);
+	flex: 0 0 auto;
+}
+
+.pmb-column-add,
+.pmb-column-menu {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--size-2-2);
+	background: none;
+	border: none;
+	box-shadow: none;
+	color: var(--text-faint);
+	cursor: pointer;
+	border-radius: var(--radius-s);
+}
+
+.pmb-column-add:hover,
+.pmb-column-menu:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.pmb-lane-columns-drop-target {
+	background-color: var(--background-modifier-hover);
+	border-radius: var(--radius-m);
 }
 
 .pmb-cards {
@@ -188,36 +267,19 @@
 	}
 
 	/* Comfortable targets for a finger rather than a pointer. */
-	.pmb-column-header,
-	.pmb-add-card {
+	.pmb-column-header {
+		min-height: 44px;
+	}
+
+	.pmb-column-add,
+	.pmb-column-menu {
+		min-width: 44px;
 		min-height: 44px;
 	}
 
 	.pmb-card {
 		padding: var(--size-4-3);
 	}
-}
-
-.pmb-add-card {
-	margin: 0 var(--size-4-2) var(--size-4-2);
-	padding: var(--size-2-2);
-	background: none;
-	border: none;
-	box-shadow: none;
-	border-radius: var(--radius-s);
-	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
-	text-align: left;
-	cursor: pointer;
-}
-
-.pmb-add-card:hover {
-	background-color: var(--background-modifier-hover);
-	color: var(--text-normal);
-}
-
-.pmb-column-collapsed .pmb-add-card {
-	display: none;
 }
 
 .pmb-card-tags,
@@ -303,4 +365,15 @@
 
 .pmb-card-detail-live .workspace-split .view-content {
 	background-color: var(--background-primary);
+}
+
+.pmb-prompt-input {
+	width: 100%;
+}
+
+.pmb-prompt-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--size-4-2);
+	margin-top: var(--size-4-3);
 }

@@ -37,6 +37,7 @@ These are the things PM-Board sets out to do differently:
 - [x] Keyboard-driven card moves and ARIA semantics
 - [x] Moving cards without a pointer or a drag
 - [x] Mobile layout
+- [x] Column header: add, rename, recolor, WIP limit, delete, drag to reorder
 
 ## Swimlanes
 
@@ -111,6 +112,30 @@ The board's own values are written last: the column's value, the lane's value
 when swimlanes are on, and the order key. A template or a default cannot
 displace a card from the column it was added from.
 
+## Columns
+
+A column's header carries more than its name and count:
+
+- **The grip handle** drags the column to reorder it, when the board groups
+  by anything other than a date. A date's own order already comes from the
+  date; there is nothing to drag it into.
+- **+** adds a card straight to that column, collapsed or not.
+- **⋯** opens a menu:
+  - **Rename column** writes the new value to every card currently in the
+    column — a column is just a value of the grouped property, not a
+    setting of its own. Hidden for a date-grouped board, since a date has
+    no name to give it.
+  - **Change color** sets an accent stripe on the column's header.
+  - **Set WIP limit** does what setting `wipLimits` by hand always did, now
+    from the column itself. Leave the field empty to remove the limit.
+  - **Delete column** clears the grouped property on every card in the
+    column; the column disappears because nothing has that value anymore,
+    but the notes themselves are otherwise untouched. The item's own label
+    states how many cards that affects.
+
+A column's WIP limit, colour, collapsed state and place in the manual order
+all follow it when it is renamed, rather than resetting.
+
 ## Card detail
 
 **Card Detail**, in the view's configuration, sets what a plain click on a
@@ -143,6 +168,13 @@ to a rendered, read-only preview with an **Open note** button instead.
   by tests, but the wiring between a keypress and the board has not been
   exercised in a running vault. Treat it as unfinished.
 - **Touch dragging is not implemented**, deliberately; use the card menu.
+- **Column drag-to-reorder has no touch or keyboard alternative.** Unlike
+  moving a card, there is no menu fallback yet; on a touch device or from
+  the keyboard, a column's order can still be set by hand through
+  `boardColumns`.
+- **Column header controls are unverified in a vault.** The rename, colour,
+  WIP limit, delete and reorder actions are new and pointer-driven; none of
+  them have been exercised outside tests yet.
 - **Persisting a collapsed column relies on an undocumented call.** The typed
   API offers no way to tell the host that a view's stored settings changed, so
   the plugin looks one up on the query controller at runtime. It is never
