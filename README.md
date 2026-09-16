@@ -201,11 +201,6 @@ to a rendered, read-only preview with an **Open note** button instead.
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through
   `boardColumns`.
-- **The card menu's new items are unverified in a vault.** Edit tags,
-  Rename, Duplicate, Delete and Schedule are covered by unit tests for the
-  logic they depend on (tag parsing, the next-Monday calculation, insertion
-  ordering), but not by exercising the menu itself, including Delete's own
-  destructive path, in a running vault.
 - **Persisting a collapsed column relies on an undocumented call.** The typed
   API offers no way to tell the host that a view's stored settings changed, so
   the plugin looks one up on the query controller at runtime. It is never
