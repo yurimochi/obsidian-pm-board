@@ -116,7 +116,7 @@ export class BoardView extends BasesView {
 	private updateTabStops(): void {
 		const cards = Array.from(this.boardEl?.querySelectorAll<HTMLElement>(".pmb-card") ?? []);
 		const active =
-			cards.find((card) => card.dataset.path === this.activePath) ?? cards.at(0) ?? null;
+			cards.find((card) => card.dataset.path === this.activePath) ?? cards[0] ?? null;
 		for (const card of cards) {
 			card.tabIndex = card === active ? 0 : -1;
 		}

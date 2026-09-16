@@ -146,6 +146,13 @@ Use `npm ci` rather than `npm install`: the checked-in lockfile is what the
 build is verified against, and re-resolving it can produce a toolchain that
 accepts code a contributor's will reject.
 
+The shipped code is typechecked on its own (`tsconfig.json`, `src` only) and
+the tests on a second config that adds them. This is deliberate: the test
+dependencies pull in type declarations that reference newer standard
+libraries, which quietly widens what the compiler accepts. Checking `src`
+alone holds it to the language level the project actually declares, so code
+that only builds because a test dependency was installed cannot ship.
+
 To test in a vault, copy `main.js`, `manifest.json`, and `styles.css` into
 `<vault>/.obsidian/plugins/pm-board/`.
 
