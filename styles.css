@@ -175,6 +175,22 @@
 	background-color: var(--background-modifier-active-hover);
 }
 
+/* A clicked button keeps browser focus afterward, which otherwise leaves a
+   background behind long after the pointer has moved on; this swaps that
+   for a clear, deliberate ring, keyboard-only so hovering never shows it. */
+.pmb-column-toggle:focus,
+.pmb-column-add:focus,
+.pmb-column-menu:focus {
+	background: none;
+}
+
+.pmb-column-toggle:focus-visible,
+.pmb-column-add:focus-visible,
+.pmb-column-menu:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
+}
+
 .pmb-lane-columns-drop-target {
 	background-color: var(--background-modifier-hover);
 	border-radius: var(--radius-m);
