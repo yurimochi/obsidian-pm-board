@@ -7,9 +7,9 @@ kanban-style board whose columns come from the Base's own `groupBy`
 configuration. Cards are your notes; moving a card writes the change straight
 back to the note's frontmatter.
 
-> **Status: early development (0.1.0).** Columns, cards and drag and drop
-> work. Swimlanes and keyboard moves are not implemented yet — see the
-> roadmap below.
+> **Status: early development (0.1.0).** Everything on the roadmap below is
+> built, but only the pointer-driven paths have been exercised in a running
+> vault. See **Known gaps** before relying on the rest.
 
 ## Design goals
 
@@ -22,8 +22,8 @@ These are the things PM-Board sets out to do differently:
   rather than a single row of columns.
 - **Keyboard-first.** Every card move is reachable without a pointer, with
   proper focus handling and ARIA semantics.
-- **Works on mobile.** Touch dragging and a layout that survives a phone
-  screen.
+- **Works on mobile.** A layout that survives a phone screen, and a way to move
+  a card that does not depend on dragging.
 
 ## Roadmap
 
