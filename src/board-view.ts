@@ -68,6 +68,8 @@ export class BoardView extends BasesView {
 	private draggedColumnIndex = -1;
 	/** Whether the board's groupBy property is a date, which cannot be renamed. */
 	private dateGrouped = false;
+	/** Whether the view has a Bases Sort by set, which then owns card order within a column. */
+	private sortActive = false;
 	private lanes: Lane[] = [];
 	/** Card to focus once the board has redrawn after a keyboard move. */
 	private pendingFocus: string | null = null;
@@ -114,6 +116,10 @@ export class BoardView extends BasesView {
 		// A date's canonical value isn't something a user can meaningfully type
 		// in as a new column name, so rename and drag-reorder are both off.
 		this.dateGrouped = groups.some((group) => group.hasKey() && group.key instanceof DateValue);
+		// Bases presorts query results per its own Sort by; while one is set,
+		// that stays the order shown and manual reordering is off, rather than
+		// the two silently fighting over the same axis.
+		this.sortActive = this.config.getSort().length > 0;
 
 		const lanes = buildLanes(
 			groups,
@@ -212,9 +218,7 @@ export class BoardView extends BasesView {
 		columnEl.toggleClass("pmb-column-colored", color !== null);
 		if (color) columnEl.style.setProperty("--pmb-column-color", color);
 
-		const ordered = sortByOrderKey(column.entries, (entry) =>
-			this.orderKeyOf(entry, config.orderProperty),
-		);
+		const ordered = this.displayOrder(column.entries, config.orderProperty);
 
 		this.renderColumnHeader(
 			columnEl,
@@ -799,6 +803,18 @@ export class BoardView extends BasesView {
 			this.orderKeyOf(entry, config.orderProperty),
 		);
 		const movedFrom = ordered.findIndex((entry) => entry.file.path === path);
+
+		// Reordering within the same column is the one thing that fights
+		// Sort by; moving to a different column does not, so only that case
+		// is blocked. There is no documented way to clear Sort by from here,
+		// so this asks for it to be cleared from the Bases toolbar instead.
+		if (this.sortActive && movedFrom !== -1) {
+			new Notice(
+				"Manual order is off while Sort by is set. Clear Sort by from the Bases toolbar to reorder by hand.",
+			);
+			return;
+		}
+
 		const neighbours = ordered.filter((entry) => entry.file.path !== path);
 
 		const plan = planInsertion(
@@ -863,8 +879,8 @@ export class BoardView extends BasesView {
 	}
 
 	/**
-	 * Manual order overrides the query's own sort, so a card stays where it was
-	 * dropped rather than jumping back on the next refresh.
+	 * Manual order overrides the query's own sort so a dropped card stays put
+	 * on the next refresh, but only while no Sort by is set; see displayOrder.
 	 */
 	private orderKeyOf(entry: BasesEntry, orderProperty: string): string | null {
 		return resolveOrderKey(
@@ -872,6 +888,18 @@ export class BoardView extends BasesView {
 			this.rawValue(entry, LEGACY_ORDER_PROPERTY),
 			orderProperty === DEFAULT_ORDER_PROPERTY,
 		);
+	}
+
+	/**
+	 * A column's cards in the order actually shown. While Sort by is set,
+	 * that is Bases' own presorted order, taken as given rather than
+	 * re-sorted by the manual order underneath it; otherwise it's the manual
+	 * order, same as always.
+	 */
+	private displayOrder(entries: BasesEntry[], orderProperty: string): BasesEntry[] {
+		return this.sortActive
+			? entries
+			: sortByOrderKey(entries, (entry) => this.orderKeyOf(entry, orderProperty));
 	}
 
 	private rawValue(entry: BasesEntry | undefined, property: string): unknown {
@@ -1223,9 +1251,7 @@ export class BoardView extends BasesView {
 		const column = this.lanes[position.lane]?.columns[position.column];
 		if (!column) return null;
 		const config = readBoardConfig(this.config);
-		const ordered = sortByOrderKey(column.entries, (entry) =>
-			this.orderKeyOf(entry, config.orderProperty),
-		);
+		const ordered = this.displayOrder(column.entries, config.orderProperty);
 		return ordered[position.index]?.file.path ?? null;
 	}
 

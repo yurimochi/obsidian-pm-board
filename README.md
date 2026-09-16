@@ -201,6 +201,11 @@ to a rendered, read-only preview with an **Open note** button instead.
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through
   `boardColumns`.
+- **Sort by taking over card order is unverified in a vault.** The wiring
+  is small (`getSort().length > 0` gates a couple of code paths), but
+  `getSort()`'s exact behavior — whether it reflects a change immediately,
+  what a multi-property sort or a formula property does here — has not
+  been exercised outside what the typed API documents.
 - **Persisting a collapsed column relies on an undocumented call.** The typed
   API offers no way to tell the host that a view's stored settings changed, so
   the plugin looks one up on the query controller at runtime. It is never
@@ -215,14 +220,24 @@ to a rendered, read-only preview with an **Open note** button instead.
 
 ## Card order
 
-Dragging a card writes its position to a `card_order` property on the note, and
-that order overrides the Base's own **Sort by** within each column, so a card
-stays where you dropped it. Set `orderProperty` on the view to use a different
-property name.
+Dragging a card writes its position to a `card_order` property on the note, so
+a card stays where you dropped it. Set `orderProperty` on the view to use a
+different property name.
 
 A board arriving from another plugin that stored order under `kanban_order` is
 read as a fallback, so its manual order survives the move; each drag rewrites
 the card onto `card_order`.
+
+**Sort by**, set from the Base's own toolbar, takes over the order within a
+column whenever it's set: cards show in the query's own presorted order
+rather than by `card_order`, and reordering within a column — by drag or by
+keyboard — is turned off, with a Notice explaining why, so the two never
+fight over the same thing. Moving a card to a *different* column still
+works; only same-column reordering is affected. There is no documented way
+to clear Sort by from the board itself, so that Notice points at the Base's
+own toolbar. `card_order` itself is left untouched while Sort by is active —
+nothing is rewritten to match it — so clearing Sort by later returns to
+whatever manual order was last set, not a jump to something new.
 
 ## Requirements
 
