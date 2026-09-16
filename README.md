@@ -172,9 +172,6 @@ to a rendered, read-only preview with an **Open note** button instead.
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through
   `boardColumns`.
-- **Column header controls are unverified in a vault.** The rename, colour,
-  WIP limit, delete and reorder actions are new and pointer-driven; none of
-  them have been exercised outside tests yet.
 - **Persisting a collapsed column relies on an undocumented call.** The typed
   API offers no way to tell the host that a view's stored settings changed, so
   the plugin looks one up on the query controller at runtime. It is never
