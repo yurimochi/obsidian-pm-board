@@ -4,6 +4,8 @@ import {
 	BasesView,
 	Keymap,
 	Menu,
+	moment,
+	normalizePath,
 	Notice,
 	QueryController,
 	RenderContext,
@@ -40,6 +42,7 @@ import {
 	sortByOrderKey,
 } from "./order";
 import { buildLanes, Lane, LaneColumn } from "./swimlanes";
+import { applyPlaceholders, joinPath, stripFrontmatter, uniqueName } from "./template";
 
 export class BoardView extends BasesView {
 	type = BOARD_VIEW_TYPE;
@@ -356,22 +359,78 @@ export class BoardView extends BasesView {
 		const sample = frontmatterKey ? this.rawValue(ordered[0], frontmatterKey) : undefined;
 		const value = coerceGroupValue(columnKey, sample);
 
-		// Renumber first: creating a note hands off to the host's new-note flow,
-		// and anything queued after that call is at the mercy of when, or
-		// whether, it comes back. The keys below belong to notes that already
-		// exist, so writing them now leaves the column consistent either way.
 		await this.applyHealedKeys(plan.healed, ordered, config.orderProperty);
 
 		const lane = this.laneWrite(config, laneKey, ordered[0]);
+		const folder = await this.newCardFolder(config);
+		const template = await this.loadTemplate(config.newItemTemplate);
+		const name = uniqueName(
+			"Untitled",
+			(candidate) =>
+				this.app.vault.getAbstractFileByPath(joinPath(folder, `${candidate}.md`)) !== null,
+		);
 
-		await this.createFileForView(undefined, (frontmatter: Record<string, unknown>) => {
-			// The board's own bookkeeping wins over configured defaults, so a
-			// default cannot place the new card outside the column it came from.
-			Object.assign(frontmatter, config.newItemProperties);
-			if (frontmatterKey && value !== null) frontmatter[frontmatterKey] = value;
-			if (lane) assign(frontmatter, lane.key, lane.value);
-			frontmatter[config.orderProperty] = plan.insertKey;
-		});
+		const body = template
+			? applyPlaceholders(template.body, {
+					title: name,
+					now: new Date(),
+					format: formatDate,
+				})
+			: "";
+		const file = await this.app.vault.create(joinPath(folder, `${name}.md`), body);
+
+		await this.app.fileManager.processFrontMatter(
+			file,
+			(frontmatter: Record<string, unknown>) => {
+				// Least specific first: a template supplies defaults, the board's
+				// own bookkeeping wins, so nothing can place the new card outside
+				// the column it was added from.
+				Object.assign(frontmatter, template?.frontmatter ?? {});
+				Object.assign(frontmatter, config.newItemProperties);
+				if (frontmatterKey && value !== null) frontmatter[frontmatterKey] = value;
+				if (lane) assign(frontmatter, lane.key, lane.value);
+				frontmatter[config.orderProperty] = plan.insertKey;
+			},
+		);
+
+		await this.app.workspace.getLeaf(false).openFile(file);
+	}
+
+	/**
+	 * Where a new card is filed. A board naming its own folder gets it created
+	 * on demand, so a board can be configured before the folder exists;
+	 * otherwise the vault's own preference for new notes decides.
+	 */
+	private async newCardFolder(config: BoardConfig): Promise<string> {
+		if (!config.newItemFolder) {
+			return this.app.fileManager.getNewFileParent(this.currentSourcePath()).path;
+		}
+		const folder = normalizePath(config.newItemFolder);
+		if (!this.app.vault.getAbstractFileByPath(folder)) {
+			await this.app.vault.createFolder(folder);
+		}
+		return folder;
+	}
+
+	private currentSourcePath(): string {
+		return this.data.data[0]?.file.path ?? "";
+	}
+
+	/** A template's body and properties, read separately so they can be merged. */
+	private async loadTemplate(
+		path: string | null,
+	): Promise<{ body: string; frontmatter: Record<string, unknown> } | null> {
+		if (!path) return null;
+		const file = this.app.vault.getFileByPath(normalizePath(path));
+		if (!file) {
+			new Notice(`Template not found: ${path}`);
+			return null;
+		}
+		const content = await this.app.vault.cachedRead(file);
+		return {
+			body: stripFrontmatter(content),
+			frontmatter: { ...this.app.metadataCache.getFileCache(file)?.frontmatter },
+		};
 	}
 
 	/** Collapsed state lives in the board file, so it survives reopening. */
@@ -661,6 +720,16 @@ export class BoardView extends BasesView {
 	private announce(message: string): void {
 		if (this.liveEl) this.liveEl.textContent = message;
 	}
+}
+
+/**
+ * The host re-exports moment as a namespace type, which TypeScript does not
+ * treat as callable even though it is at runtime. The cast is kept here so it
+ * appears once rather than at every call site.
+ */
+function formatDate(date: Date, pattern: string): string {
+	const callable = moment as unknown as (value: Date) => { format: (p: string) => string };
+	return callable(date).format(pattern);
 }
 
 /** Writes a property, or clears it when the target has no value. */

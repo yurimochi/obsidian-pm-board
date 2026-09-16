@@ -85,6 +85,32 @@ actions.
 On a narrow screen a column nearly fills the width and the board is swiped
 sideways between columns, so a column is readable rather than half visible.
 
+## New cards
+
+Cards added from a column are created by the plugin rather than by the host's
+new-note flow, so the board controls where they land and what they contain.
+
+```yaml
+views:
+  - type: pm-board
+    name: Delivery
+    newItemFolder: Tasks
+    newItemTemplate: Templates/task.md
+    newItemProperties:
+      team: frontend
+```
+
+- **`newItemFolder`** files new cards here, creating the folder if it does not
+  exist yet. Without it, the vault's own preference for new notes applies.
+- **`newItemTemplate`** supplies the new card's body and properties.
+  `{{title}}`, `{{date}}`, `{{time}}` and their `{{date:FORMAT}}` variants are
+  filled in, matching the core Templates plugin.
+- **`newItemProperties`** are merged over the template's.
+
+The board's own values are written last: the column's value, the lane's value
+when swimlanes are on, and the order key. A template or a default cannot
+displace a card from the column it was added from.
+
 ## Known gaps
 
 - **Keyboard support is unverified.** The navigation and move logic is covered
