@@ -277,3 +277,21 @@
 .pmb-card-detail-open {
 	margin-bottom: var(--size-4-3);
 }
+
+/* The live leaf brings its own title, properties widget and editor, so it
+   needs real dimensions rather than the read-only preview's content box. */
+.pmb-card-detail-live.modal {
+	width: min(900px, 90vw);
+	height: min(700px, 85vh);
+}
+
+.pmb-card-detail-live .modal-content {
+	display: flex;
+	height: 100%;
+	padding: 0;
+	overflow: hidden;
+}
+
+.pmb-card-detail-live .workspace-leaf {
+	height: 100%;
+}
