@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyPlaceholders, joinPath, stripFrontmatter, uniqueName } from "../src/template";
+import { applyPlaceholders, joinPath, uniqueName } from "../src/template";
 
 /** Stands in for moment: echoes the pattern so substitution is observable. */
 const ctx = {
@@ -31,36 +31,16 @@ describe("applyPlaceholders", () => {
 		expect(applyPlaceholders("{{title}} and {{title}}", ctx)).toBe("My card and My card");
 	});
 
+	it("fills placeholders inside a frontmatter block too", () => {
+		expect(applyPlaceholders("---\ncreated: {{date}}\n---\n# {{title}}", ctx)).toBe(
+			"---\ncreated: <YYYY-MM-DD>\n---\n# My card",
+		);
+	});
+
 	it("leaves braces it does not recognise alone", () => {
 		expect(applyPlaceholders("{{unknown}} {{ title }} {not a placeholder}", ctx)).toBe(
 			"{{unknown}} {{ title }} {not a placeholder}",
 		);
-	});
-});
-
-describe("stripFrontmatter", () => {
-	it("removes a leading block", () => {
-		expect(stripFrontmatter("---\nstatus: Todo\n---\n# Body")).toBe("# Body");
-	});
-
-	it("handles carriage returns", () => {
-		expect(stripFrontmatter("---\r\nstatus: Todo\r\n---\r\nBody")).toBe("Body");
-	});
-
-	it("handles a template that is only frontmatter", () => {
-		expect(stripFrontmatter("---\nstatus: Todo\n---\n")).toBe("");
-	});
-
-	it("leaves a body with no frontmatter untouched", () => {
-		expect(stripFrontmatter("# Body\n\nText")).toBe("# Body\n\nText");
-	});
-
-	it("keeps a rule that is not frontmatter", () => {
-		expect(stripFrontmatter("# Title\n\n---\n\nAfter")).toBe("# Title\n\n---\n\nAfter");
-	});
-
-	it("stops at the first closing delimiter", () => {
-		expect(stripFrontmatter("---\na: 1\n---\nBody\n---\nMore")).toBe("Body\n---\nMore");
 	});
 });
 

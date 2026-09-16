@@ -42,7 +42,7 @@ import {
 	sortByOrderKey,
 } from "./order";
 import { buildLanes, Lane, LaneColumn } from "./swimlanes";
-import { applyPlaceholders, joinPath, stripFrontmatter, uniqueName } from "./template";
+import { applyPlaceholders, joinPath, uniqueName } from "./template";
 
 export class BoardView extends BasesView {
 	type = BOARD_VIEW_TYPE;
@@ -370,22 +370,20 @@ export class BoardView extends BasesView {
 				this.app.vault.getAbstractFileByPath(joinPath(folder, `${candidate}.md`)) !== null,
 		);
 
-		const body = template
-			? applyPlaceholders(template.body, {
-					title: name,
-					now: new Date(),
-					format: formatDate,
-				})
+		// The template is written whole, frontmatter block included, so the host
+		// parses those properties itself. Merging them by hand meant reading
+		// them back out of the metadata cache and trusting its shape.
+		const content = template
+			? applyPlaceholders(template, { title: name, now: new Date(), format: formatDate })
 			: "";
-		const file = await this.app.vault.create(joinPath(folder, `${name}.md`), body);
+		const file = await this.app.vault.create(joinPath(folder, `${name}.md`), content);
 
 		await this.app.fileManager.processFrontMatter(
 			file,
 			(frontmatter: Record<string, unknown>) => {
-				// Least specific first: a template supplies defaults, the board's
-				// own bookkeeping wins, so nothing can place the new card outside
-				// the column it was added from.
-				Object.assign(frontmatter, template?.frontmatter ?? {});
+				// The template's own properties are already here; these go over
+				// the top, so nothing can place the card outside the column it
+				// was added from.
 				Object.assign(frontmatter, config.newItemProperties);
 				if (frontmatterKey && value !== null) frontmatter[frontmatterKey] = value;
 				if (lane) assign(frontmatter, lane.key, lane.value);
@@ -416,21 +414,15 @@ export class BoardView extends BasesView {
 		return this.data.data[0]?.file.path ?? "";
 	}
 
-	/** A template's body and properties, read separately so they can be merged. */
-	private async loadTemplate(
-		path: string | null,
-	): Promise<{ body: string; frontmatter: Record<string, unknown> } | null> {
+	/** The template's full text, or null when the board names no usable one. */
+	private async loadTemplate(path: string | null): Promise<string | null> {
 		if (!path) return null;
 		const file = this.app.vault.getFileByPath(normalizePath(path));
 		if (!file) {
 			new Notice(`Template not found: ${path}`);
 			return null;
 		}
-		const content = await this.app.vault.cachedRead(file);
-		return {
-			body: stripFrontmatter(content),
-			frontmatter: { ...this.app.metadataCache.getFileCache(file)?.frontmatter },
-		};
+		return this.app.vault.cachedRead(file);
 	}
 
 	/** Collapsed state lives in the board file, so it survives reopening. */

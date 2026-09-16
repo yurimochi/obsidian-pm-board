@@ -24,19 +24,6 @@ export function applyPlaceholders(text: string, ctx: PlaceholderContext): string
 	});
 }
 
-const LEADING_FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/;
-
-/**
- * Drops a template's own frontmatter block, leaving the body.
- *
- * The properties are read separately and merged, so leaving the block in place
- * would write it into the new note twice: once as text and once as real
- * frontmatter.
- */
-export function stripFrontmatter(content: string): string {
-	return content.replace(LEADING_FRONTMATTER, "");
-}
-
 /**
  * A name no sibling is using yet, counting up the way Obsidian names untitled
  * notes.
