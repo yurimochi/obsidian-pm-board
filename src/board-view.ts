@@ -3,6 +3,7 @@ import {
 	BasesPropertyId,
 	BasesView,
 	Keymap,
+	Menu,
 	Notice,
 	QueryController,
 	RenderContext,
@@ -239,6 +240,12 @@ export class BoardView extends BasesView {
 		this.registerDomEvent(cardEl, "keydown", (event) =>
 			this.onCardKey(event, entry, config, at),
 		);
+		// Long-pressing on touch raises this too, which is how a card is moved
+		// where dragging is not available.
+		this.registerDomEvent(cardEl, "contextmenu", (event) => {
+			event.preventDefault();
+			this.showCardMenu(event, entry, config, at);
+		});
 		this.registerDomEvent(cardEl, "click", (event) =>
 			this.openEntry(entry, config, {
 				mod: Keymap.isModEvent(event) !== false,
@@ -528,10 +535,78 @@ export class BoardView extends BasesView {
 
 		const target = moveTarget(this.shape(), at, action.direction);
 		if (!target) return;
-		this.report(this.moveByKeyboard(entry, config, target), "Could not move the card.");
+		this.report(this.moveToPosition(entry, config, target), "Could not move the card.");
 	}
 
-	private async moveByKeyboard(
+	private showCardMenu(
+		event: MouseEvent,
+		entry: BasesEntry,
+		config: BoardConfig,
+		at: BoardPosition,
+	): void {
+		const menu = new Menu();
+		const lane = this.lanes[at.lane];
+
+		menu.addItem((item) => item.setIsLabel(true).setTitle("Move to column"));
+		lane.columns.forEach((column, index) => {
+			menu.addItem((item) =>
+				item
+					.setTitle(column.key ?? NO_VALUE_COLLAPSE_KEY)
+					.setChecked(index === at.column)
+					.onClick(() => {
+						if (index === at.column) return;
+						this.moveTo(entry, config, {
+							lane: at.lane,
+							column: index,
+							index: column.entries.length,
+						});
+					}),
+			);
+		});
+
+		if (config.swimlaneProperty && this.lanes.length > 1) {
+			menu.addSeparator();
+			menu.addItem((item) => item.setIsLabel(true).setTitle("Move to lane"));
+			this.lanes.forEach((target, index) => {
+				const size = target.columns[at.column]?.entries.length ?? 0;
+				menu.addItem((item) =>
+					item
+						.setTitle(target.key ?? NO_VALUE_COLLAPSE_KEY)
+						.setChecked(index === at.lane)
+						.onClick(() => {
+							if (index === at.lane) return;
+							this.moveTo(entry, config, {
+								lane: index,
+								column: at.column,
+								index: size,
+							});
+						}),
+				);
+			});
+		}
+
+		menu.addSeparator();
+		menu.addItem((item) =>
+			item
+				.setTitle("Open in new tab")
+				.setIcon("lucide-file-plus")
+				.onClick(() => this.openEntry(entry, config, { mod: true, alt: false })),
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle("Open to the side")
+				.setIcon("lucide-separator-vertical")
+				.onClick(() => this.openEntry(entry, config, { mod: true, alt: true })),
+		);
+
+		menu.showAtMouseEvent(event);
+	}
+
+	private moveTo(entry: BasesEntry, config: BoardConfig, to: BoardPosition): void {
+		this.report(this.moveToPosition(entry, config, to), "Could not move the card.");
+	}
+
+	private async moveToPosition(
 		entry: BasesEntry,
 		config: BoardConfig,
 		to: BoardPosition,

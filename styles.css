@@ -167,6 +167,37 @@
 	font-weight: var(--font-medium);
 }
 
+/* On a phone a column that only shows part of itself is unreadable, so one
+   nearly fills the screen and the board is swiped sideways between them. */
+@media (max-width: 600px) {
+	.pmb-board {
+		padding: var(--size-4-2);
+	}
+
+	.pmb-column {
+		flex-basis: min(86vw, 340px);
+		scroll-snap-align: start;
+	}
+
+	.pmb-lane-columns {
+		scroll-snap-type: x proximity;
+	}
+
+	.pmb-card-cover {
+		aspect-ratio: 2 / 1;
+	}
+
+	/* Comfortable targets for a finger rather than a pointer. */
+	.pmb-column-header,
+	.pmb-add-card {
+		min-height: 44px;
+	}
+
+	.pmb-card {
+		padding: var(--size-4-3);
+	}
+}
+
 .pmb-add-card {
 	margin: 0 var(--size-4-2) var(--size-4-2);
 	padding: var(--size-2-2);

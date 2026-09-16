@@ -35,7 +35,8 @@ These are the things PM-Board sets out to do differently:
 - [x] Adding cards from a column
 - [x] Swimlanes (two-axis grouping)
 - [x] Keyboard-driven card moves and ARIA semantics
-- [ ] Touch support and mobile layout
+- [x] Moving cards without a pointer or a drag
+- [x] Mobile layout
 
 ## Swimlanes
 
@@ -72,6 +73,24 @@ Cards are focusable, so the board is reachable by tabbing into it.
 A move redraws the board, and focus follows the card rather than falling back
 to the document. Each move is announced to screen readers with the card's new
 column and position.
+
+## Touch and mobile
+
+Dragging uses HTML5 drag and drop, which touch devices do not fire. Rather
+than reimplement dragging for touch, every move is also available from the
+card's context menu, which Obsidian raises on a long press: it lists the
+board's columns, and its lanes when swimlanes are on, alongside the open
+actions.
+
+On a narrow screen a column nearly fills the width and the board is swiped
+sideways between columns, so a column is readable rather than half visible.
+
+## Known gaps
+
+- **Keyboard support is unverified.** The navigation and move logic is covered
+  by tests, but the wiring between a keypress and the board has not been
+  exercised in a running vault. Treat it as unfinished.
+- **Touch dragging is not implemented**, deliberately; use the card menu.
 
 ## Card order
 
