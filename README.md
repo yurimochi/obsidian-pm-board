@@ -112,6 +112,9 @@ The board's own values are written last: the column's value, the lane's value
 when swimlanes are on, and the order key. A template or a default cannot
 displace a card from the column it was added from.
 
+Once created, the new card opens the same way clicking an existing one does,
+following the board's **Card Detail** setting.
+
 ## Columns
 
 A column's header carries more than its name and count:

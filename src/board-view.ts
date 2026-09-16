@@ -11,6 +11,7 @@ import {
 	QueryController,
 	RenderContext,
 	setIcon,
+	TFile,
 } from "obsidian";
 import {
 	BoardConfig,
@@ -688,7 +689,21 @@ export class BoardView extends BasesView {
 			},
 		);
 
-		await this.app.workspace.getLeaf(false).openFile(file);
+		await this.openFile(file, config);
+	}
+
+	/** Opens a file the same way a click on a card does, honouring Card Detail. */
+	private async openFile(
+		file: TFile,
+		config: BoardConfig,
+		modifiers: OpenModifiers = { mod: false, alt: false },
+	): Promise<void> {
+		const target = resolveOpenTarget(config.cardOpenBehavior, modifiers);
+		if (target === "modal") {
+			new CardDetailModal(this.app, file).open();
+			return;
+		}
+		await this.app.workspace.getLeaf(target).openFile(file);
 	}
 
 	/**
@@ -862,12 +877,7 @@ export class BoardView extends BasesView {
 	}
 
 	private openEntry(entry: BasesEntry, config: BoardConfig, modifiers: OpenModifiers): void {
-		const target = resolveOpenTarget(config.cardOpenBehavior, modifiers);
-		if (target === "modal") {
-			new CardDetailModal(this.app, entry.file).open();
-			return;
-		}
-		void this.app.workspace.getLeaf(target).openFile(entry.file);
+		void this.openFile(entry.file, config, modifiers);
 	}
 
 	/**
