@@ -153,32 +153,21 @@ export class BoardView extends BasesView {
 		if (!collapsed) next[storageKey] = true;
 
 		this.config.set("collapsedColumns", Object.keys(next).length > 0 ? next : null);
-		this.logPersistenceSurface();
-		this.onDataUpdated();
+		// The host redraws once it has taken the change; do it here only if not.
+		if (!this.notifyConfigChanged()) this.onDataUpdated();
 	}
 
 	/**
-	 * Collapsing does not survive reopening the board, so the call that stores it
-	 * is not reaching the file. The typed surface exposes no way to persist, so
-	 * this reports what the objects actually carry at runtime.
+	 * Storing a value only updates the config held in memory. The host has to be
+	 * told before it writes the board file, and that call is not part of the
+	 * typed surface, so it is looked up rather than assumed to exist: without it
+	 * a collapsed column still toggles, it just forgets on reopen.
 	 */
-	private logPersistenceSurface(): void {
-		const methodsOf = (value: object): string[] => {
-			const names = new Set<string>();
-			let current: object | null = Object.getPrototypeOf(value) as object | null;
-			while (current && current !== Object.prototype) {
-				for (const name of Object.getOwnPropertyNames(current)) names.add(name);
-				current = Object.getPrototypeOf(current) as object | null;
-			}
-			return [...names];
-		};
-
-		console.error("PM-Board persistence surface", {
-			configMethods: methodsOf(this.config),
-			configFields: Object.keys(this.config),
-			controllerMethods: methodsOf(this.controller),
-			controllerFields: Object.keys(this.controller),
-		});
+	private notifyConfigChanged(): boolean {
+		const controller = this.controller as unknown as { onConfigChanged?: unknown };
+		if (typeof controller.onConfigChanged !== "function") return false;
+		(controller.onConfigChanged as () => void).call(this.controller);
+		return true;
 	}
 
 	private async moveCard(
