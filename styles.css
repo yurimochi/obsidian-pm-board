@@ -128,6 +128,13 @@
 	cursor: grabbing;
 }
 
+.pmb-card:hover {
+	border-color: var(--background-modifier-border-hover);
+	background-color: var(--background-primary-alt);
+}
+
+/* Keyboard focus only: hovering must not look like the card is focused,
+   since the arrow keys act on focus and not on the pointer. */
 .pmb-card:focus-visible {
 	outline: 2px solid var(--interactive-accent);
 	outline-offset: 2px;

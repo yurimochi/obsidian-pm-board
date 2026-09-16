@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BoardShape, dropIndexFor, focusTarget, moveTarget } from "../src/keyboard";
+import { BoardShape, dropIndexFor, focusTarget, keyAction, moveTarget } from "../src/keyboard";
 import { adjustIndexForRemoval } from "../src/order";
 
 /** One lane: three columns holding 2, 0 and 3 cards. */
@@ -10,6 +10,49 @@ const twoLanes: BoardShape = [
 	[2, 1, 0],
 	[1, 0, 2],
 ];
+
+describe("keyAction", () => {
+	const chord = (key: string, mod = false, shift = false) => ({ key, mod, shift });
+
+	it("opens on Enter", () => {
+		expect(keyAction(chord("Enter"))).toEqual({ kind: "open" });
+	});
+
+	it("moves focus on a bare arrow", () => {
+		expect(keyAction(chord("ArrowRight"))).toEqual({ kind: "focus", direction: "right" });
+		expect(keyAction(chord("ArrowUp"))).toEqual({ kind: "focus", direction: "up" });
+	});
+
+	it("moves the card when the modifier is held", () => {
+		expect(keyAction(chord("ArrowLeft", true))).toEqual({ kind: "move", direction: "left" });
+		expect(keyAction(chord("ArrowDown", true))).toEqual({ kind: "move", direction: "down" });
+	});
+
+	it("reaches the lane axis only with modifier and shift together", () => {
+		expect(keyAction(chord("ArrowUp", true, true))).toEqual({
+			kind: "move",
+			direction: "laneUp",
+		});
+		expect(keyAction(chord("ArrowDown", true, true))).toEqual({
+			kind: "move",
+			direction: "laneDown",
+		});
+	});
+
+	it("leaves a bare shifted arrow unclaimed", () => {
+		expect(keyAction(chord("ArrowUp", false, true))).toBeNull();
+	});
+
+	it("ignores shifted sideways moves, which have no lane meaning", () => {
+		expect(keyAction(chord("ArrowLeft", true, true))).toBeNull();
+	});
+
+	it("ignores keys the board does not claim", () => {
+		expect(keyAction(chord("a"))).toBeNull();
+		expect(keyAction(chord("Escape"))).toBeNull();
+		expect(keyAction(chord(" "))).toBeNull();
+	});
+});
 
 describe("focusTarget", () => {
 	it("steps through a column", () => {

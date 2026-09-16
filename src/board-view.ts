@@ -27,7 +27,7 @@ import {
 	BoardShape,
 	dropIndexFor,
 	focusTarget,
-	FocusDirection,
+	keyAction,
 	moveTarget,
 } from "./keyboard";
 import { OpenModifiers, resolveOpenTarget } from "./open-behavior";
@@ -506,28 +506,27 @@ export class BoardView extends BasesView {
 		config: BoardConfig,
 		at: BoardPosition,
 	): void {
-		if (event.key === "Enter") {
-			event.preventDefault();
+		const action = keyAction({
+			key: event.key,
+			mod: event.ctrlKey || event.metaKey,
+			shift: event.shiftKey,
+		});
+		if (!action) return;
+		event.preventDefault();
+
+		if (action.kind === "open") {
 			this.openEntry(entry, config, { mod: false, alt: false });
 			return;
 		}
 
-		const direction = arrowDirection(event.key);
-		if (!direction) return;
-		event.preventDefault();
-
-		if (!(event.ctrlKey || event.metaKey)) {
-			const target = focusTarget(this.shape(), at, direction);
-			if (target) this.cardElementFor(this.pathAt(target) ?? "")?.focus();
+		if (action.kind === "focus") {
+			const target = focusTarget(this.shape(), at, action.direction);
+			const path = target ? this.pathAt(target) : null;
+			if (path) this.cardElementFor(path)?.focus();
 			return;
 		}
 
-		const lanewise = event.shiftKey && (direction === "up" || direction === "down");
-		const target = moveTarget(
-			this.shape(),
-			at,
-			lanewise ? (direction === "up" ? "laneUp" : "laneDown") : direction,
-		);
+		const target = moveTarget(this.shape(), at, action.direction);
 		if (!target) return;
 		this.report(this.moveByKeyboard(entry, config, target), "Could not move the card.");
 	}
@@ -587,17 +586,6 @@ export class BoardView extends BasesView {
 	private announce(message: string): void {
 		if (this.liveEl) this.liveEl.textContent = message;
 	}
-}
-
-const ARROWS: Record<string, FocusDirection> = {
-	ArrowLeft: "left",
-	ArrowRight: "right",
-	ArrowUp: "up",
-	ArrowDown: "down",
-};
-
-function arrowDirection(key: string): FocusDirection | null {
-	return ARROWS[key] ?? null;
 }
 
 /** Writes a property, or clears it when the target has no value. */

@@ -1,3 +1,45 @@
+export interface KeyChord {
+	key: string;
+	/** Ctrl on Windows and Linux, Cmd on macOS. */
+	mod: boolean;
+	shift: boolean;
+}
+
+export type KeyAction =
+	| { kind: "open" }
+	| { kind: "focus"; direction: FocusDirection }
+	| { kind: "move"; direction: MoveDirection };
+
+const ARROWS: Record<string, FocusDirection> = {
+	ArrowLeft: "left",
+	ArrowRight: "right",
+	ArrowUp: "up",
+	ArrowDown: "down",
+};
+
+/**
+ * What a keypress on a focused card means.
+ *
+ * Shift only reaches the lane axis together with the modifier, so a bare
+ * shifted arrow stays free for a future selection gesture rather than quietly
+ * moving a card.
+ */
+export function keyAction(chord: KeyChord): KeyAction | null {
+	if (chord.key === "Enter") return { kind: "open" };
+
+	const direction = ARROWS[chord.key];
+	if (!direction) return null;
+
+	if (!chord.mod) return chord.shift ? null : { kind: "focus", direction };
+
+	if (chord.shift) {
+		if (direction === "up") return { kind: "move", direction: "laneUp" };
+		if (direction === "down") return { kind: "move", direction: "laneDown" };
+		return null;
+	}
+	return { kind: "move", direction };
+}
+
 /** How many cards each column holds, per lane: shape[lane][column]. */
 export type BoardShape = number[][];
 
