@@ -49,6 +49,8 @@ export class BoardView extends BasesView {
 	private lanes: Lane[] = [];
 	/** Card to focus once the board has redrawn after a keyboard move. */
 	private pendingFocus: string | null = null;
+	/** Card that currently holds the board's single tab stop. */
+	private activePath: string | null = null;
 	private readonly renderContext: RenderContext = { hoverPopover: null };
 
 	constructor(
@@ -64,6 +66,13 @@ export class BoardView extends BasesView {
 		this.liveEl = this.containerEl.createDiv({ cls: "pmb-live" });
 		this.liveEl.setAttribute("aria-live", "polite");
 		this.liveEl.setAttribute("aria-atomic", "true");
+
+		this.registerDomEvent(this.boardEl, "focusin", (event) => {
+			const card = (event.target as HTMLElement).closest<HTMLElement>(".pmb-card");
+			if (!card?.dataset.path) return;
+			this.activePath = card.dataset.path;
+			this.updateTabStops();
+		});
 	}
 
 	onunload(): void {
@@ -91,7 +100,22 @@ export class BoardView extends BasesView {
 		lanes.forEach((lane, laneIndex) => {
 			this.renderLane(this.boardEl as HTMLElement, lane, config, properties, laneIndex);
 		});
+		this.updateTabStops();
 		this.restoreFocus();
+	}
+
+	/**
+	 * The board is one tab stop, not one per card: tabbing through a column of
+	 * twenty is nobody's idea of keyboard support, and the arrow keys are what
+	 * move between cards once inside.
+	 */
+	private updateTabStops(): void {
+		const cards = Array.from(this.boardEl?.querySelectorAll<HTMLElement>(".pmb-card") ?? []);
+		const active =
+			cards.find((card) => card.dataset.path === this.activePath) ?? cards.at(0) ?? null;
+		for (const card of cards) {
+			card.tabIndex = card === active ? 0 : -1;
+		}
 	}
 
 	/**
@@ -207,7 +231,7 @@ export class BoardView extends BasesView {
 			(target) => this.coverSrcOf(target, config),
 		);
 		cardEl.draggable = true;
-		cardEl.tabIndex = 0;
+		cardEl.tabIndex = -1;
 		cardEl.dataset.path = entry.file.path;
 		cardEl.setAttribute("role", "listitem");
 		cardEl.setAttribute("aria-label", this.cardLabel(entry, config, at));
