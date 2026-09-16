@@ -306,7 +306,7 @@ export class BoardView extends BasesView {
 		properties: BasesPropertyId[],
 		at: BoardPosition,
 	): void {
-		const cardEl = renderCard(
+		const { cardEl, checkboxProperty } = renderCard(
 			cardsEl,
 			entry,
 			config,
@@ -319,6 +319,23 @@ export class BoardView extends BasesView {
 		cardEl.dataset.path = entry.file.path;
 		cardEl.setAttribute("role", "listitem");
 		cardEl.setAttribute("aria-label", this.cardLabel(entry, config, at));
+
+		if (checkboxProperty) {
+			const checkboxEl = cardEl.querySelector<HTMLElement>(".pmb-card-checkbox");
+			// Not given its own tab stop: the board is one tab stop per card,
+			// and a second focusable target per card would defeat that.
+			if (checkboxEl) {
+				this.registerDomEvent(checkboxEl, "click", (event) => {
+					// The card itself opens the note on click; the checkbox
+					// stands on its own, and must not also trigger that.
+					event.stopPropagation();
+					this.report(
+						this.toggleCheckbox(entry, checkboxProperty),
+						"Could not update the checkbox.",
+					);
+				});
+			}
+		}
 
 		this.registerDomEvent(cardEl, "keydown", (event) =>
 			this.onCardKey(event, entry, config, at),
@@ -796,6 +813,21 @@ export class BoardView extends BasesView {
 				frontmatter[orderProperty] = key;
 			});
 		}
+	}
+
+	/**
+	 * `Value.renderTo` only draws a value; it has no write-back of its own, so
+	 * the card's checkbox needs its own toggle. The current value is read from
+	 * live frontmatter at write time rather than the entry snapshot the card
+	 * was rendered from, so a rapid double click cannot race itself back to
+	 * the value it started at.
+	 */
+	private async toggleCheckbox(entry: BasesEntry, property: BasesPropertyId): Promise<void> {
+		const key = frontmatterKeyOf(property);
+		if (!key) return;
+		await this.writeFrontMatter(entry.file.path, (frontmatter) => {
+			frontmatter[key] = frontmatter[key] !== true;
+		});
 	}
 
 	/**

@@ -250,8 +250,22 @@
 .pmb-card-checkbox {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	flex-shrink: 0;
-	transform: scale(1.15);
+	width: 20px;
+	height: 20px;
+	border: 2px solid var(--background-modifier-border-hover);
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.pmb-card-checkbox:hover {
+	border-color: var(--interactive-accent);
+}
+
+.pmb-card-checkbox-checked {
+	background-color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
 }
 
 .pmb-card-title {

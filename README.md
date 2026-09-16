@@ -168,6 +168,9 @@ to a rendered, read-only preview with an **Open note** button instead.
   by tests, but the wiring between a keypress and the board has not been
   exercised in a running vault. Treat it as unfinished.
 - **Touch dragging is not implemented**, deliberately; use the card menu.
+- **The card's checkbox has no keyboard access.** It is not given its own tab
+  stop, since the board is deliberately one tab stop per card; there is no
+  keyboard path to toggle it yet.
 - **Column drag-to-reorder has no touch or keyboard alternative.** Unlike
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through

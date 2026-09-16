@@ -11,6 +11,12 @@ import { normaliseTagName } from "./tag-colors";
 
 const TAGS_PROPERTY = "file.tags";
 
+export interface RenderedCard {
+	cardEl: HTMLElement;
+	/** The property backing the checkbox, or null when the card has none. */
+	checkboxProperty: BasesPropertyId | null;
+}
+
 export function renderCard(
 	parentEl: HTMLElement,
 	entry: BasesEntry,
@@ -18,7 +24,7 @@ export function renderCard(
 	properties: BasesPropertyId[],
 	ctx: RenderContext,
 	resolveCover?: (entry: BasesEntry) => string | null,
-): HTMLElement {
+): RenderedCard {
 	const cardEl = parentEl.createDiv({ cls: "pmb-card" });
 
 	const coverSrc = resolveCover?.(entry) ?? null;
@@ -34,17 +40,25 @@ export function renderCard(
 	// The first checkbox-valued property found stands in for the card, the
 	// way a status circle does elsewhere; the rest still render as chips.
 	let checkbox: Value | null = null;
+	let checkboxProperty: BasesPropertyId | null = null;
 	for (const propId of properties) {
 		if (propId === config.cardTitleProperty) continue;
 		const value = entry.getValue(propId);
 		if (!value) continue;
 		if (propId === TAGS_PROPERTY) tags.push(...valuesOf(value).map(normaliseTagName));
-		else if (!checkbox && value instanceof BooleanValue) checkbox = value;
-		else chips.push(value);
+		else if (!checkbox && value instanceof BooleanValue) {
+			checkbox = value;
+			checkboxProperty = propId;
+		} else chips.push(value);
 	}
 
 	const headerEl = cardEl.createDiv({ cls: "pmb-card-header" });
-	if (checkbox) checkbox.renderTo(headerEl.createSpan({ cls: "pmb-card-checkbox" }), ctx);
+	if (checkbox) {
+		const checkboxEl = headerEl.createSpan({ cls: "pmb-card-checkbox" });
+		checkboxEl.setAttribute("role", "checkbox");
+		checkboxEl.setAttribute("aria-checked", String(checkbox.isTruthy()));
+		checkboxEl.toggleClass("pmb-card-checkbox-checked", checkbox.isTruthy());
+	}
 	headerEl.createDiv({ cls: "pmb-card-title", text: cardTitle(entry, config) });
 
 	if (chips.length > 0 || tags.length > 0) {
@@ -55,7 +69,7 @@ export function renderCard(
 
 	cardEl.createDiv({ cls: "pmb-card-date", text: createdLabel(entry) });
 
-	return cardEl;
+	return { cardEl, checkboxProperty };
 }
 
 export function cardTitle(entry: BasesEntry, config: BoardConfig): string {
