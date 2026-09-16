@@ -126,12 +126,17 @@ card does:
 Modifier keys always win over the setting, matching the rest of Obsidian:
 Ctrl/Cmd-click opens a new tab, and Ctrl/Cmd-Alt-click opens a split.
 
-The floating modal is a rendered, read-only preview with an **Open note**
-button rather than a live editor. A live editable pane was tried first; it
-relies on constructing a `WorkspaceLeaf` outside the normal workspace tree,
-which the public API does not document a way to do, and in testing it
-mounted with no error but rendered nothing. The read-only preview only needs
-the same public rendering API any plugin can use.
+The floating modal hosts a live, editable pane, properties widget included,
+the same as opening the note anywhere else. It does this by building a
+`WorkspaceSplit` and a `WorkspaceLeaf` outside the normal workspace tree,
+which the public API does not document a way to do; a first attempt at a
+bare, parentless leaf mounted with no error but rendered nothing, because it
+had no root or container to measure against. The working wiring adapts the
+technique the [Hover Editor](https://github.com/nothingislost/obsidian-hover-editor)
+community plugin uses for its own floating panes, an unrelated project used
+here only as a reference for this one undocumented mechanism, not for any
+part of the board itself. If the leaf cannot be built, the modal falls back
+to a rendered, read-only preview with an **Open note** button instead.
 
 ## Known gaps
 
@@ -143,7 +148,13 @@ the same public rendering API any plugin can use.
   API offers no way to tell the host that a view's stored settings changed, so
   the plugin looks one up on the query controller at runtime. It is never
   assumed to exist: without it a column still collapses, it just forgets on
-  reopen. Nothing else in the plugin reaches past the public API.
+  reopen.
+- **The floating card detail's live leaf is unverified in a vault.** It
+  builds a `WorkspaceSplit` and `WorkspaceLeaf` the same undocumented way,
+  and while the wiring is adapted from a technique proven in another widely
+  used plugin, it has not been exercised here in a running vault. It should
+  fall back to the read-only preview rather than break the board if it
+  cannot mount; that fallback path is also unverified.
 
 ## Card order
 
