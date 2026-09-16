@@ -150,7 +150,12 @@ export class BoardView extends BasesView {
 		const config = readBoardConfig(this.config);
 		const groupProperty = groupByPropertyOf(this.config);
 		if (!groupProperty) {
-			console.error("PM-Board could not read the group-by property from:", this.config);
+			const groupBy = (this.config as unknown as Record<string, unknown>).groupBy;
+			console.error("PM-Board could not read the group-by property.", {
+				groupBy,
+				groupByKeys: groupBy && typeof groupBy === "object" ? Object.keys(groupBy) : null,
+				config: this.config,
+			});
 			new Notice("Could not tell which property this board groups by. See the console.");
 			return;
 		}

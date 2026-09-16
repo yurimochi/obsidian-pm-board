@@ -62,28 +62,46 @@ export function readBoardConfig(config: BasesViewConfig): BoardConfig {
  * The property the board groups by. Bases stores it as an object alongside a
  * sort direction, but a bare property name is also valid.
  */
+/**
+ * Grouping belongs to the query rather than to a view's own settings, so it
+ * sits on the config object as a field and does not come back from the
+ * settings lookup that serves every other board setting.
+ */
 export function groupByPropertyOf(config: BasesViewConfig): string | null {
+	const fromField = readPropertyName((config as unknown as Record<string, unknown>).groupBy);
+	if (fromField) return fromField;
+
 	const asPropertyId = config.getAsPropertyId("groupBy");
 	if (asPropertyId) return asPropertyId;
 
-	for (const key of ["groupBy", "group_by", "group"]) {
-		const resolved = readPropertyName(config.get(key));
-		if (resolved) return resolved;
-	}
-	return null;
+	return readPropertyName(config.get("groupBy"));
 }
 
 /** Accepts the shapes a group-by setting is known to take. */
 function readPropertyName(value: unknown): string | null {
 	if (typeof value === "string") return value || null;
-	if (!isPlainObject(value)) return null;
+	if (typeof value !== "object" || value === null) return null;
 
-	const property = value.property ?? value.prop ?? value.name ?? value.id;
+	const holder = value as Record<string, unknown>;
+	const property = holder.property ?? holder.prop ?? holder.name ?? holder.id;
+
 	if (typeof property === "string") return property || null;
-	if (isPlainObject(property) && typeof property.name === "string") {
-		return property.name || null;
+	if (typeof property === "object" && property !== null) {
+		const nested = property as Record<string, unknown>;
+		for (const candidate of [nested.name, nested.id, nested.property]) {
+			if (typeof candidate === "string" && candidate) return candidate;
+		}
+		return asText(property);
 	}
-	return null;
+	return asText(value);
+}
+
+/** A property object may carry its own id in toString, but never a plain one. */
+function asText(value: object): string | null {
+	const own = (value as { toString?: unknown }).toString;
+	if (typeof own !== "function" || own === Object.prototype.toString) return null;
+	const text: unknown = own.call(value);
+	return typeof text === "string" && text ? text : null;
 }
 
 /** The key a group is stored under in `collapsedColumns`. */

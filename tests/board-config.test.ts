@@ -110,7 +110,31 @@ describe("readBoardConfig", () => {
 	});
 });
 
+/** A config whose groupBy sits on the object itself, as the host provides it. */
+function fieldProperty(groupBy: unknown): string | null {
+	return groupByPropertyOf({
+		groupBy,
+		get: () => undefined,
+		getAsPropertyId: () => null,
+	} as never);
+}
+
 describe("groupByPropertyOf", () => {
+	it("reads groupBy off the config object itself", () => {
+		expect(fieldProperty({ property: "due", direction: "ASC" })).toBe("due");
+		expect(fieldProperty({ property: { type: "note", name: "due" } })).toBe("due");
+		expect(fieldProperty("note.due")).toBe("note.due");
+	});
+
+	it("accepts a property object that stringifies to its own id", () => {
+		expect(fieldProperty({ property: { toString: () => "note.due" } })).toBe("note.due");
+	});
+
+	it("ignores a field that names nothing", () => {
+		expect(fieldProperty({ direction: "ASC" })).toBeNull();
+		expect(fieldProperty(undefined)).toBeNull();
+	});
+
 	it("prefers the property id the host resolves", () => {
 		expect(groupByPropertyOf(fakeConfig({ groupBy: "note.due" }))).toBe("note.due");
 	});
