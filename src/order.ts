@@ -82,6 +82,21 @@ export function planInsertion(neighbourKeys: (string | null)[], index: number): 
 	};
 }
 
+/**
+ * The order key for a card, falling back to the value under a legacy property.
+ * The fallback applies only while the board uses the default property: once a
+ * user names their own, an unrelated legacy value must not leak into it.
+ */
+export function resolveOrderKey(
+	primary: unknown,
+	legacy: unknown,
+	usingDefaultProperty: boolean,
+): string | null {
+	const key = sanitiseOrderKey(primary);
+	if (key !== null || !usingDefaultProperty) return key;
+	return sanitiseOrderKey(legacy);
+}
+
 /** Sorts by order key, sinking cards that have none to the bottom. */
 export function compareOrderKeys(a: string | null, b: string | null): number {
 	if (a === b) return 0;

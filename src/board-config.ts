@@ -6,7 +6,7 @@ import { BasesPropertyId, BasesViewConfig } from "obsidian";
  * while `boardColumns` uses an empty string. Both spellings must round-trip.
  */
 export const NO_VALUE_COLLAPSE_KEY = "(No value)";
-export const NO_VALUE_ORDER_KEY = "";
+const NO_VALUE_ORDER_KEY = "";
 
 export type CardOpenBehavior = "active" | "tab" | "split" | "modal";
 
@@ -39,7 +39,14 @@ export interface BoardConfig {
 	orderProperty: string;
 }
 
-export const DEFAULT_ORDER_PROPERTY = "kanban_order";
+export const DEFAULT_ORDER_PROPERTY = "card_order";
+
+/**
+ * Order property written by other board plugins. Read as a fallback so a board
+ * arriving from one keeps its manual order; every drop rewrites onto the
+ * property above, so a note carries the old one only until it next moves.
+ */
+export const LEGACY_ORDER_PROPERTY = "kanban_order";
 
 export function readBoardConfig(config: BasesViewConfig): BoardConfig {
 	return {

@@ -6,6 +6,7 @@ import {
 	insertKeyAt,
 	keyBetween,
 	planInsertion,
+	resolveOrderKey,
 	sanitiseOrderKey,
 } from "../src/order";
 
@@ -125,6 +126,25 @@ describe("planInsertion", () => {
 	it("renumbers when only some keys are missing", () => {
 		const plan = planInsertion(["a1", null], 1);
 		expect(plan.healed.every((key) => key !== null)).toBe(true);
+	});
+});
+
+describe("resolveOrderKey", () => {
+	it("prefers the current property", () => {
+		expect(resolveOrderKey("a2", "a1", true)).toBe("a2");
+	});
+
+	it("falls back to the legacy property while on the default", () => {
+		expect(resolveOrderKey(undefined, "a1", true)).toBe("a1");
+		expect(resolveOrderKey("", "a1", true)).toBe("a1");
+	});
+
+	it("ignores the legacy property once the board names its own", () => {
+		expect(resolveOrderKey(undefined, "a1", false)).toBeNull();
+	});
+
+	it("returns null when neither property has a usable key", () => {
+		expect(resolveOrderKey(undefined, undefined, true)).toBeNull();
 	});
 });
 

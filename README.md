@@ -36,6 +36,17 @@ These are the things PM-Board sets out to do differently:
 - [ ] Keyboard-driven card moves and ARIA semantics
 - [ ] Touch support and mobile layout
 
+## Card order
+
+Dragging a card writes its position to a `card_order` property on the note, and
+that order overrides the Base's own **Sort by** within each column, so a card
+stays where you dropped it. Set `orderProperty` on the view to use a different
+property name.
+
+A board arriving from another plugin that stored order under `kanban_order` is
+read as a fallback, so its manual order survives the move; each drag rewrites
+the card onto `card_order`.
+
 ## Requirements
 
 Obsidian 1.10.2 or later, with Bases enabled.

@@ -11,7 +11,9 @@ import {
 import {
 	BoardConfig,
 	collapseKey,
+	DEFAULT_ORDER_PROPERTY,
 	groupByPropertyOf,
+	LEGACY_ORDER_PROPERTY,
 	lookupColumn,
 	NO_VALUE_COLLAPSE_KEY,
 	readBoardConfig,
@@ -26,7 +28,7 @@ import {
 	compareOrderKeys,
 	insertionIndexAt,
 	planInsertion,
-	sanitiseOrderKey,
+	resolveOrderKey,
 } from "./order";
 
 export class BoardView extends BasesView {
@@ -79,13 +81,15 @@ export class BoardView extends BasesView {
 			limit !== null && group.entries.length > limit,
 		);
 
-		const headerEl = columnEl.createDiv({ cls: "pmb-column-header" });
+		const headerEl = columnEl.createEl("button", { cls: "pmb-column-header" });
+		headerEl.setAttribute("aria-expanded", String(!collapsed));
 		headerEl.createSpan({ cls: "pmb-column-title", text: key ?? NO_VALUE_COLLAPSE_KEY });
 		headerEl.createSpan({
 			cls: "pmb-column-count",
 			text:
 				limit === null ? String(group.entries.length) : `${group.entries.length}/${limit}`,
 		});
+		this.registerDomEvent(headerEl, "click", () => this.toggleColumn(key, collapsed));
 
 		if (collapsed) return;
 
@@ -137,6 +141,19 @@ export class BoardView extends BasesView {
 			const index = insertionIndexAt(cardBounds(cardsEl), event.clientY);
 			void this.moveCard(path, columnKey, index);
 		});
+	}
+
+	/** Collapsed state lives in the board file, so it survives reopening. */
+	private toggleColumn(key: string | null, collapsed: boolean): void {
+		const storageKey = collapseKey(key);
+		const next: Record<string, true> = {};
+		for (const existing of readBoardConfig(this.config).collapsedColumns) {
+			if (existing !== storageKey) next[existing] = true;
+		}
+		if (!collapsed) next[storageKey] = true;
+
+		this.config.set("collapsedColumns", Object.keys(next).length > 0 ? next : null);
+		this.onDataUpdated();
 	}
 
 	private async moveCard(
@@ -210,7 +227,11 @@ export class BoardView extends BasesView {
 	}
 
 	private orderKeyOf(entry: BasesEntry, orderProperty: string): string | null {
-		return sanitiseOrderKey(this.rawValue(entry, orderProperty));
+		return resolveOrderKey(
+			this.rawValue(entry, orderProperty),
+			this.rawValue(entry, LEGACY_ORDER_PROPERTY),
+			orderProperty === DEFAULT_ORDER_PROPERTY,
+		);
 	}
 
 	private rawValue(entry: BasesEntry | undefined, property: string): unknown {
