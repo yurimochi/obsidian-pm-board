@@ -126,11 +126,12 @@ card does:
 Modifier keys always win over the setting, matching the rest of Obsidian:
 Ctrl/Cmd-click opens a new tab, and Ctrl/Cmd-Alt-click opens a split.
 
-The floating modal hosts a live, editable pane, properties widget included,
-the same as opening the note anywhere else. That relies on constructing a
-`WorkspaceLeaf` outside the normal workspace tree, which the public API does
-not document a way to do. If that construction fails, the modal falls back
-to a rendered, read-only preview with an **Open note** button instead.
+The floating modal is a rendered, read-only preview with an **Open note**
+button rather than a live editor. A live editable pane was tried first; it
+relies on constructing a `WorkspaceLeaf` outside the normal workspace tree,
+which the public API does not document a way to do, and in testing it
+mounted with no error but rendered nothing. The read-only preview only needs
+the same public rendering API any plugin can use.
 
 ## Known gaps
 
@@ -142,11 +143,7 @@ to a rendered, read-only preview with an **Open note** button instead.
   API offers no way to tell the host that a view's stored settings changed, so
   the plugin looks one up on the query controller at runtime. It is never
   assumed to exist: without it a column still collapses, it just forgets on
-  reopen.
-- **The floating card detail is unverified.** It builds a `WorkspaceLeaf` the
-  same undocumented way, and has not been exercised in a running vault. If it
-  does not work as built, it should at least fall back to the read-only
-  preview rather than break the board; that fallback path is also unverified.
+  reopen. Nothing else in the plugin reaches past the public API.
 
 ## Card order
 
