@@ -256,7 +256,7 @@
 
 .pmb-card-title {
 	flex: 1;
-	font-size: var(--font-ui-medium);
+	font-size: var(--font-ui-small);
 	font-weight: var(--font-semibold);
 	line-height: 1.3;
 }
