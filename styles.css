@@ -41,7 +41,7 @@
 .pmb-column {
 	display: flex;
 	flex-direction: column;
-	flex: 0 0 var(--pmb-column-width, 272px);
+	flex: 0 0 var(--pmb-column-width, 320px);
 	max-height: 100%;
 	background-color: var(--background-secondary);
 	border-radius: var(--radius-m);
