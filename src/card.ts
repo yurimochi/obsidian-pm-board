@@ -55,8 +55,10 @@ export function renderCard(
 	const headerEl = cardEl.createDiv({ cls: "pmb-card-header" });
 	if (checkbox) {
 		const checkboxEl = headerEl.createSpan({ cls: "pmb-card-checkbox" });
-		checkboxEl.setAttribute("role", "checkbox");
-		checkboxEl.setAttribute("aria-checked", String(checkbox.isTruthy()));
+		// role="checkbox" collides with Obsidian's own native checkbox
+		// styling for that role, drawing a second ring over ours.
+		checkboxEl.setAttribute("role", "button");
+		checkboxEl.setAttribute("aria-pressed", String(checkbox.isTruthy()));
 		checkboxEl.toggleClass("pmb-card-checkbox-checked", checkbox.isTruthy());
 	}
 	headerEl.createDiv({ cls: "pmb-card-title", text: cardTitle(entry, config) });
