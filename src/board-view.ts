@@ -17,12 +17,20 @@ import {
 	NO_VALUE_COLLAPSE_KEY,
 	readBoardConfig,
 } from "./board-config";
-import { renderCard } from "./card";
+import { cardTitle, renderCard } from "./card";
 import { groupKeyOf, sortGroups } from "./column-order";
 import { BOARD_VIEW_TYPE } from "./constants";
 import { parseCoverReference } from "./cover";
 import { coerceGroupValue, frontmatterKeyOf } from "./frontmatter";
-import { resolveOpenTarget } from "./open-behavior";
+import {
+	BoardPosition,
+	BoardShape,
+	dropIndexFor,
+	focusTarget,
+	FocusDirection,
+	moveTarget,
+} from "./keyboard";
+import { OpenModifiers, resolveOpenTarget } from "./open-behavior";
 import {
 	adjustIndexForRemoval,
 	insertionIndexAt,
@@ -36,7 +44,11 @@ export class BoardView extends BasesView {
 	type = BOARD_VIEW_TYPE;
 
 	private boardEl: HTMLElement | null = null;
+	private liveEl: HTMLElement | null = null;
 	private draggedPath: string | null = null;
+	private lanes: Lane[] = [];
+	/** Card to focus once the board has redrawn after a keyboard move. */
+	private pendingFocus: string | null = null;
 	private readonly renderContext: RenderContext = { hoverPopover: null };
 
 	constructor(
@@ -48,11 +60,17 @@ export class BoardView extends BasesView {
 
 	onload(): void {
 		this.boardEl = this.containerEl.createDiv({ cls: "pmb-board" });
+		// Lives outside the board so redrawing the cards cannot wipe it.
+		this.liveEl = this.containerEl.createDiv({ cls: "pmb-live" });
+		this.liveEl.setAttribute("aria-live", "polite");
+		this.liveEl.setAttribute("aria-atomic", "true");
 	}
 
 	onunload(): void {
 		this.boardEl?.detach();
+		this.liveEl?.detach();
 		this.boardEl = null;
+		this.liveEl = null;
 	}
 
 	onDataUpdated(): void {
@@ -67,11 +85,31 @@ export class BoardView extends BasesView {
 			laneProperty ? (entry) => textValueOf(entry, laneProperty) : null,
 		);
 
+		this.lanes = lanes;
 		this.boardEl.empty();
 		this.boardEl.toggleClass("pmb-board-laned", lanes.length > 1 || laneProperty !== null);
-		for (const lane of lanes) {
-			this.renderLane(this.boardEl, lane, config, properties);
-		}
+		lanes.forEach((lane, laneIndex) => {
+			this.renderLane(this.boardEl as HTMLElement, lane, config, properties, laneIndex);
+		});
+		this.restoreFocus();
+	}
+
+	/**
+	 * A move rewrites notes, which redraws the board and destroys the element
+	 * that had focus. Without this the card would move and focus would fall back
+	 * to the document, stranding anyone working from the keyboard.
+	 */
+	private restoreFocus(): void {
+		const path = this.pendingFocus;
+		this.pendingFocus = null;
+		if (!path) return;
+		this.cardElementFor(path)?.focus();
+	}
+
+	private cardElementFor(path: string): HTMLElement | null {
+		return (
+			this.boardEl?.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`) ?? null
+		);
 	}
 
 	private renderLane(
@@ -79,6 +117,7 @@ export class BoardView extends BasesView {
 		lane: Lane,
 		config: BoardConfig,
 		properties: BasesPropertyId[],
+		laneIndex: number,
 	): void {
 		const laneEl = parentEl.createDiv({ cls: "pmb-lane" });
 		if (config.swimlaneProperty) {
@@ -89,9 +128,12 @@ export class BoardView extends BasesView {
 		}
 
 		const columnsEl = laneEl.createDiv({ cls: "pmb-lane-columns" });
-		for (const column of lane.columns) {
-			this.renderColumn(columnsEl, column, config, properties, lane.key);
-		}
+		lane.columns.forEach((column, columnIndex) => {
+			this.renderColumn(columnsEl, column, config, properties, lane.key, {
+				lane: laneIndex,
+				column: columnIndex,
+			});
+		});
 	}
 
 	private renderColumn(
@@ -100,12 +142,15 @@ export class BoardView extends BasesView {
 		config: BoardConfig,
 		properties: BasesPropertyId[],
 		laneKey: string | null,
+		at: { lane: number; column: number },
 	): void {
 		const key = column.key;
 		const collapsed = config.collapsedColumns.has(collapseKey(key));
 		const limit = lookupColumn(config.wipLimits, key);
 
 		const columnEl = parentEl.createDiv({ cls: "pmb-column" });
+		columnEl.setAttribute("role", "group");
+		columnEl.setAttribute("aria-label", key ?? NO_VALUE_COLLAPSE_KEY);
 		columnEl.toggleClass("pmb-column-collapsed", collapsed);
 		columnEl.toggleClass(
 			"pmb-column-over-limit",
@@ -131,9 +176,13 @@ export class BoardView extends BasesView {
 		);
 
 		const cardsEl = columnEl.createDiv({ cls: "pmb-cards" });
-		for (const entry of ordered) {
-			this.renderDraggableCard(cardsEl, entry, config, properties);
-		}
+		cardsEl.setAttribute("role", "list");
+		ordered.forEach((entry, index) => {
+			this.renderDraggableCard(cardsEl, entry, config, properties, {
+				...at,
+				index,
+			});
+		});
 		this.registerDropTarget(cardsEl, key, ordered, laneKey);
 
 		const addEl = columnEl.createEl("button", { cls: "pmb-add-card", text: "Add card" });
@@ -147,6 +196,7 @@ export class BoardView extends BasesView {
 		entry: BasesEntry,
 		config: BoardConfig,
 		properties: BasesPropertyId[],
+		at: BoardPosition,
 	): void {
 		const cardEl = renderCard(
 			cardsEl,
@@ -157,8 +207,20 @@ export class BoardView extends BasesView {
 			(target) => this.coverSrcOf(target, config),
 		);
 		cardEl.draggable = true;
+		cardEl.tabIndex = 0;
+		cardEl.dataset.path = entry.file.path;
+		cardEl.setAttribute("role", "listitem");
+		cardEl.setAttribute("aria-label", this.cardLabel(entry, config, at));
 
-		this.registerDomEvent(cardEl, "click", (event) => this.openEntry(entry, event, config));
+		this.registerDomEvent(cardEl, "keydown", (event) =>
+			this.onCardKey(event, entry, config, at),
+		);
+		this.registerDomEvent(cardEl, "click", (event) =>
+			this.openEntry(entry, config, {
+				mod: Keymap.isModEvent(event) !== false,
+				alt: event.altKey,
+			}),
+		);
 		this.registerDomEvent(cardEl, "dragstart", (event) => {
 			this.draggedPath = entry.file.path;
 			cardEl.addClass("pmb-card-dragging");
@@ -405,13 +467,113 @@ export class BoardView extends BasesView {
 		return this.app.metadataCache.getFileCache(entry.file)?.frontmatter?.[property];
 	}
 
-	private openEntry(entry: BasesEntry, event: MouseEvent, config: BoardConfig): void {
-		const target = resolveOpenTarget(config.cardOpenBehavior, {
-			mod: Keymap.isModEvent(event) !== false,
-			alt: event.altKey,
-		});
+	private openEntry(entry: BasesEntry, config: BoardConfig, modifiers: OpenModifiers): void {
+		const target = resolveOpenTarget(config.cardOpenBehavior, modifiers);
 		void this.app.workspace.getLeaf(target).openFile(entry.file);
 	}
+
+	/**
+	 * Arrows walk the board; holding the modifier carries the card along, with
+	 * shift reserved for the lane axis so the two never collide.
+	 */
+	private onCardKey(
+		event: KeyboardEvent,
+		entry: BasesEntry,
+		config: BoardConfig,
+		at: BoardPosition,
+	): void {
+		if (event.key === "Enter") {
+			event.preventDefault();
+			this.openEntry(entry, config, { mod: false, alt: false });
+			return;
+		}
+
+		const direction = arrowDirection(event.key);
+		if (!direction) return;
+		event.preventDefault();
+
+		if (!(event.ctrlKey || event.metaKey)) {
+			const target = focusTarget(this.shape(), at, direction);
+			if (target) this.cardElementFor(this.pathAt(target) ?? "")?.focus();
+			return;
+		}
+
+		const lanewise = event.shiftKey && (direction === "up" || direction === "down");
+		const target = moveTarget(
+			this.shape(),
+			at,
+			lanewise ? (direction === "up" ? "laneUp" : "laneDown") : direction,
+		);
+		if (!target) return;
+		this.report(this.moveByKeyboard(entry, config, target), "Could not move the card.");
+	}
+
+	private async moveByKeyboard(
+		entry: BasesEntry,
+		config: BoardConfig,
+		to: BoardPosition,
+	): Promise<void> {
+		const lane = this.lanes[to.lane];
+		const column = lane.columns[to.column];
+		const ordered = sortByOrderKey(column.entries, (target) =>
+			this.orderKeyOf(target, config.orderProperty),
+		);
+		const movedFrom = ordered.findIndex((target) => target.file.path === entry.file.path);
+
+		this.pendingFocus = entry.file.path;
+		await this.moveCard(
+			entry.file.path,
+			column.key,
+			dropIndexFor(to.index, movedFrom),
+			column.entries,
+			lane.key,
+		);
+		this.announce(
+			`${cardTitle(entry, config)} moved to ${column.key ?? NO_VALUE_COLLAPSE_KEY}, position ${to.index + 1}`,
+		);
+	}
+
+	/** How many cards sit in each column, with collapsed columns counting none. */
+	private shape(): BoardShape {
+		const config = readBoardConfig(this.config);
+		return this.lanes.map((lane) =>
+			lane.columns.map((column) =>
+				config.collapsedColumns.has(collapseKey(column.key)) ? 0 : column.entries.length,
+			),
+		);
+	}
+
+	private pathAt(position: BoardPosition): string | null {
+		const column = this.lanes[position.lane]?.columns[position.column];
+		if (!column) return null;
+		const config = readBoardConfig(this.config);
+		const ordered = sortByOrderKey(column.entries, (entry) =>
+			this.orderKeyOf(entry, config.orderProperty),
+		);
+		return ordered[position.index]?.file.path ?? null;
+	}
+
+	private cardLabel(entry: BasesEntry, config: BoardConfig, at: BoardPosition): string {
+		const column = this.lanes[at.lane]?.columns[at.column];
+		const total = column?.entries.length ?? 0;
+		const where = column?.key ?? NO_VALUE_COLLAPSE_KEY;
+		return `${cardTitle(entry, config)}, ${where}, ${at.index + 1} of ${total}`;
+	}
+
+	private announce(message: string): void {
+		if (this.liveEl) this.liveEl.textContent = message;
+	}
+}
+
+const ARROWS: Record<string, FocusDirection> = {
+	ArrowLeft: "left",
+	ArrowRight: "right",
+	ArrowUp: "up",
+	ArrowDown: "down",
+};
+
+function arrowDirection(key: string): FocusDirection | null {
+	return ARROWS[key] ?? null;
 }
 
 /** Writes a property, or clears it when the target has no value. */

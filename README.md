@@ -34,7 +34,7 @@ These are the things PM-Board sets out to do differently:
 - [x] Card cover images
 - [x] Adding cards from a column
 - [x] Swimlanes (two-axis grouping)
-- [ ] Keyboard-driven card moves and ARIA semantics
+- [x] Keyboard-driven card moves and ARIA semantics
 - [ ] Touch support and mobile layout
 
 ## Swimlanes
@@ -57,6 +57,21 @@ views:
 Lanes follow the order the query yields them, and cards with no value for the
 property collect in a final lane. A WIP limit applies to each lane's stack
 rather than to the column as a whole.
+
+## Keyboard
+
+Cards are focusable, so the board is reachable by tabbing into it.
+
+| Keys | Effect |
+| --- | --- |
+| Arrow keys | Move focus between cards; sideways skips empty columns, vertical carries on into the next lane |
+| Ctrl/Cmd + Arrow | Move the focused card between columns or up and down its own column |
+| Ctrl/Cmd + Shift + Up/Down | Move the focused card to the lane above or below |
+| Enter | Open the card's note |
+
+A move redraws the board, and focus follows the card rather than falling back
+to the document. Each move is announced to screen readers with the card's new
+column and position.
 
 ## Card order
 

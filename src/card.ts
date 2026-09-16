@@ -40,7 +40,7 @@ export function renderCard(
 	return cardEl;
 }
 
-function cardTitle(entry: BasesEntry, config: BoardConfig): string {
+export function cardTitle(entry: BasesEntry, config: BoardConfig): string {
 	if (config.cardTitleProperty) {
 		const configured = entry.getValue(config.cardTitleProperty)?.toString().trim();
 		if (configured) return configured;
