@@ -1,6 +1,13 @@
-import { BasesEntry, BasesPropertyId, ListValue, RenderContext, Value } from "obsidian";
+import {
+	BasesEntry,
+	BasesPropertyId,
+	BooleanValue,
+	ListValue,
+	RenderContext,
+	Value,
+} from "obsidian";
 import { BoardConfig } from "./board-config";
-import { normaliseTagName, textToneFor } from "./tag-colors";
+import { normaliseTagName } from "./tag-colors";
 
 const TAGS_PROPERTY = "file.tags";
 
@@ -22,20 +29,31 @@ export function renderCard(
 		coverEl.loading = "lazy";
 	}
 
-	cardEl.createDiv({ cls: "pmb-card-title", text: cardTitle(entry, config) });
-
 	const tags: string[] = [];
 	const chips: Value[] = [];
+	// The first checkbox-valued property found stands in for the card, the
+	// way a status circle does elsewhere; the rest still render as chips.
+	let checkbox: Value | null = null;
 	for (const propId of properties) {
 		if (propId === config.cardTitleProperty) continue;
 		const value = entry.getValue(propId);
 		if (!value) continue;
 		if (propId === TAGS_PROPERTY) tags.push(...valuesOf(value).map(normaliseTagName));
+		else if (!checkbox && value instanceof BooleanValue) checkbox = value;
 		else chips.push(value);
 	}
 
-	if (tags.length > 0) renderTags(cardEl, tags, config);
-	if (chips.length > 0) renderChips(cardEl, chips, ctx);
+	const headerEl = cardEl.createDiv({ cls: "pmb-card-header" });
+	if (checkbox) checkbox.renderTo(headerEl.createSpan({ cls: "pmb-card-checkbox" }), ctx);
+	headerEl.createDiv({ cls: "pmb-card-title", text: cardTitle(entry, config) });
+
+	if (chips.length > 0 || tags.length > 0) {
+		const metaEl = cardEl.createDiv({ cls: "pmb-card-meta" });
+		if (chips.length > 0) renderChips(metaEl, chips, ctx);
+		if (tags.length > 0) renderTags(metaEl, tags, config);
+	}
+
+	cardEl.createDiv({ cls: "pmb-card-date", text: createdLabel(entry) });
 
 	return cardEl;
 }
@@ -48,22 +66,22 @@ export function cardTitle(entry: BasesEntry, config: BoardConfig): string {
 	return entry.file.basename;
 }
 
-function renderTags(cardEl: HTMLElement, tags: string[], config: BoardConfig): void {
-	const tagsEl = cardEl.createDiv({ cls: "pmb-card-tags" });
+function renderTags(parentEl: HTMLElement, tags: string[], config: BoardConfig): void {
 	for (const tag of tags) {
 		if (!tag) continue;
-		const tagEl = tagsEl.createSpan({ cls: "pmb-tag", text: tag });
+		const tagEl = parentEl.createSpan({ cls: "pmb-tag" });
 		const color = config.tagColors.get(tag);
-		if (!color) continue;
-		tagEl.style.setProperty("--pmb-tag-color", color);
-		tagEl.addClass("pmb-tag-colored", `pmb-tag-on-${textToneFor(color)}`);
+		if (color) {
+			const dotEl = tagEl.createSpan({ cls: "pmb-tag-dot" });
+			dotEl.style.setProperty("--pmb-tag-color", color);
+		}
+		tagEl.createSpan({ text: tag });
 	}
 }
 
-function renderChips(cardEl: HTMLElement, values: Value[], ctx: RenderContext): void {
-	const chipsEl = cardEl.createDiv({ cls: "pmb-card-chips" });
+function renderChips(parentEl: HTMLElement, values: Value[], ctx: RenderContext): void {
 	for (const value of values) {
-		value.renderTo(chipsEl.createSpan({ cls: "pmb-chip" }), ctx);
+		value.renderTo(parentEl.createSpan({ cls: "pmb-chip" }), ctx);
 	}
 }
 
@@ -79,4 +97,13 @@ function valuesOf(value: Value): string[] {
 		if (text) items.push(text);
 	}
 	return items;
+}
+
+const CREATED_DATE_FORMAT: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+
+function createdLabel(entry: BasesEntry): string {
+	const date = new Intl.DateTimeFormat(undefined, CREATED_DATE_FORMAT).format(
+		entry.file.stat.ctime,
+	);
+	return `Created ${date}`;
 }

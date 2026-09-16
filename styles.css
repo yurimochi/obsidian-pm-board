@@ -241,9 +241,28 @@
 	margin-bottom: var(--size-2-3);
 }
 
+.pmb-card-header {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+}
+
+.pmb-card-checkbox {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+}
+
 .pmb-card-title {
+	flex: 1;
 	font-size: var(--font-ui-small);
 	font-weight: var(--font-medium);
+}
+
+.pmb-card-date {
+	margin-top: var(--size-2-3);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
 }
 
 /* On a phone a column that only shows part of itself is unreadable, so one
@@ -282,49 +301,39 @@
 	}
 }
 
-.pmb-card-tags,
-.pmb-card-chips {
+.pmb-card-meta {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: center;
 	gap: var(--size-2-2);
 	margin-top: var(--size-2-3);
 }
 
 .pmb-tag,
 .pmb-chip {
-	border-radius: var(--radius-s);
+	display: inline-flex;
+	align-items: center;
+	border-radius: 999px;
 	font-size: var(--font-ui-smaller);
 	line-height: 1.4;
-	padding: 0 var(--size-2-2);
+	padding: 0 var(--size-2-3);
 	max-width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-.pmb-tag {
 	background-color: var(--background-modifier-hover);
 	color: var(--text-muted);
 }
 
-.pmb-tag-colored {
+/* The dot carries the tag's colour instead of the pill's own background, so
+   the label stays legible without picking a contrasting text tone per tag. */
+.pmb-tag-dot {
+	flex-shrink: 0;
+	width: 8px;
+	height: 8px;
+	margin-right: var(--size-2-2);
+	border-radius: 50%;
 	background-color: var(--pmb-tag-color);
-}
-
-/* Chosen per tag by contrast against its own colour, not by the app theme,
-   so these cannot come from the theme's text variables. A theme that wants
-   different extremes can still override the two below. */
-.pmb-tag-on-light {
-	color: var(--pmb-tag-text-light, #fff);
-}
-
-.pmb-tag-on-dark {
-	color: var(--pmb-tag-text-dark, #000);
-}
-
-.pmb-chip {
-	background-color: var(--background-modifier-hover);
-	color: var(--text-muted);
 }
 
 .pmb-chip:empty {
