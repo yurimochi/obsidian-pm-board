@@ -149,3 +149,17 @@ export function columnInsertionIndexAt(
 export function reorderIndexFor(targetIndex: number, movedFrom: number): number {
 	return movedFrom < targetIndex ? targetIndex - 1 : targetIndex;
 }
+
+/**
+ * Which way a horizontally-scrolling container should auto-scroll while a
+ * pointer sits near one of its edges, or 0 while it's clear of both.
+ */
+export function autoScrollDirection(
+	container: { left: number; right: number },
+	clientX: number,
+	edgeZone: number,
+): -1 | 0 | 1 {
+	if (clientX - container.left < edgeZone) return -1;
+	if (container.right - clientX < edgeZone) return 1;
+	return 0;
+}

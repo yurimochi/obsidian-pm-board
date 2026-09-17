@@ -8,6 +8,7 @@ import {
 	moment,
 	normalizePath,
 	Notice,
+	Platform,
 	QueryController,
 	RenderContext,
 	setIcon,
@@ -45,6 +46,7 @@ import {
 import { OpenModifiers, resolveOpenTarget } from "./open-behavior";
 import {
 	adjustIndexForRemoval,
+	autoScrollDirection,
 	columnInsertionIndexAt,
 	insertionIndexAt,
 	planInsertion,
@@ -58,6 +60,39 @@ import { buildLanes, Lane, LaneColumn } from "./swimlanes";
 import { applyPlaceholders, joinPath, uniqueName } from "./template";
 import { parseTagList } from "./tag-colors";
 
+/** How long a still touch is held before it counts as a long press, opening the card menu. */
+const TOUCH_LONG_PRESS_MS = 450;
+/** How far a touch can move before a pending long press is read as a drag instead. */
+const TOUCH_MOVE_THRESHOLD_PX = 10;
+/** How close to a lane's horizontal edge a drag has to get to auto-scroll it. */
+const TOUCH_EDGE_SCROLL_ZONE_PX = 48;
+/** Auto-scroll speed, in pixels per animation frame. */
+const TOUCH_EDGE_SCROLL_SPEED_PX = 14;
+
+/** State for a card being moved by touch: a still hold opens the menu, a drag moves the card. */
+interface TouchDragState {
+	pointerId: number;
+	entry: BasesEntry;
+	config: BoardConfig;
+	at: BoardPosition;
+	cardEl: HTMLElement;
+	startX: number;
+	startY: number;
+	lastX: number;
+	lastY: number;
+	longPressTimer: number;
+	/** The long press already fired (the menu is open, or about to be); the touch is spent. */
+	menuShown: boolean;
+	dragging: boolean;
+	ghostEl: HTMLElement | null;
+	grabOffsetX: number;
+	grabOffsetY: number;
+	dropEl: HTMLElement | null;
+	scrollEl: HTMLElement | null;
+	scrollDir: -1 | 0 | 1;
+	scrollRafId: number | null;
+}
+
 export class BoardView extends BasesView {
 	type = BOARD_VIEW_TYPE;
 
@@ -66,6 +101,8 @@ export class BoardView extends BasesView {
 	private draggedPath: string | null = null;
 	/** Index of the column being dragged into a new position; -1 while none is. */
 	private draggedColumnIndex = -1;
+	/** The touch gesture in progress on a card, mobile only; null between touches. */
+	private touchDrag: TouchDragState | null = null;
 	/** Whether the board's groupBy property is a date, which cannot be renamed. */
 	private dateGrouped = false;
 	/** Whether the view has a Bases Sort by set, which then owns card order within a column. */
@@ -235,6 +272,10 @@ export class BoardView extends BasesView {
 
 		const cardsEl = columnEl.createDiv({ cls: "pmb-cards" });
 		cardsEl.setAttribute("role", "list");
+		// A touch drag hit-tests elements under the finger, which only gives it
+		// the DOM node; these place it back at a lane and column.
+		cardsEl.dataset.lane = String(at.lane);
+		cardsEl.dataset.column = String(at.column);
 		ordered.forEach((entry, index) => {
 			this.renderDraggableCard(cardsEl, entry, config, properties, {
 				...at,
@@ -348,11 +389,13 @@ export class BoardView extends BasesView {
 		this.registerDomEvent(cardEl, "keydown", (event) =>
 			this.onCardKey(event, entry, config, at),
 		);
-		// Long-pressing on touch raises this too, which is how a card is moved
-		// where dragging is not available.
 		this.registerDomEvent(cardEl, "contextmenu", (event) => {
 			event.preventDefault();
-			this.showCardMenu(event, entry, config, at, cardEl);
+			// On mobile the touch handlers below own opening the menu, holding a
+			// still finger themselves rather than trusting the browser's own
+			// long-press gesture, which can't tell a hold from the start of a drag.
+			if (Platform.isMobile) return;
+			this.showCardMenu({ x: event.clientX, y: event.clientY }, entry, config, at, cardEl);
 		});
 		this.registerDomEvent(cardEl, "click", (event) =>
 			this.openEntry(entry, config, {
@@ -370,6 +413,215 @@ export class BoardView extends BasesView {
 			this.draggedPath = null;
 			cardEl.removeClass("pmb-card-dragging");
 		});
+
+		if (Platform.isMobile) {
+			this.registerDomEvent(cardEl, "touchstart", (event) =>
+				this.onCardTouchStart(event, entry, config, at, cardEl),
+			);
+			this.registerDomEvent(cardEl, "touchmove", (event) => this.onCardTouchMove(event), {
+				passive: false,
+			});
+			this.registerDomEvent(cardEl, "touchend", (event) => this.onCardTouchEnd(event));
+			this.registerDomEvent(cardEl, "touchcancel", () => this.cancelCardTouch());
+		}
+	}
+
+	/**
+	 * Starts tracking a touch on a card. What it turns into is decided as the
+	 * touch continues: held still, it opens the card menu (`onTouchLongPress`);
+	 * moved past the threshold first, it becomes a drag (`startTouchDrag`).
+	 */
+	private onCardTouchStart(
+		event: TouchEvent,
+		entry: BasesEntry,
+		config: BoardConfig,
+		at: BoardPosition,
+		cardEl: HTMLElement,
+	): void {
+		// A second finger touching down mid-gesture is not a pinch this board
+		// supports; leave the first touch's gesture alone rather than confuse it.
+		if (this.touchDrag || event.touches.length !== 1) return;
+		const touch = event.touches[0];
+		const rect = cardEl.getBoundingClientRect();
+
+		this.touchDrag = {
+			pointerId: touch.identifier,
+			entry,
+			config,
+			at,
+			cardEl,
+			startX: touch.clientX,
+			startY: touch.clientY,
+			lastX: touch.clientX,
+			lastY: touch.clientY,
+			longPressTimer: window.setTimeout(() => this.onTouchLongPress(), TOUCH_LONG_PRESS_MS),
+			menuShown: false,
+			dragging: false,
+			ghostEl: null,
+			grabOffsetX: touch.clientX - rect.left,
+			grabOffsetY: touch.clientY - rect.top,
+			dropEl: null,
+			scrollEl: null,
+			scrollDir: 0,
+			scrollRafId: null,
+		};
+	}
+
+	/** The touch has been held still for the long-press duration: open the card menu. */
+	private onTouchLongPress(): void {
+		const state = this.touchDrag;
+		if (!state || state.dragging) return;
+		state.menuShown = true;
+		this.showCardMenu(
+			{ x: state.lastX, y: state.lastY },
+			state.entry,
+			state.config,
+			state.at,
+			state.cardEl,
+		);
+	}
+
+	private onCardTouchMove(event: TouchEvent): void {
+		const state = this.touchDrag;
+		if (!state || state.menuShown) return;
+		const touch = touchWithId(event.touches, state.pointerId);
+		if (!touch) return;
+		state.lastX = touch.clientX;
+		state.lastY = touch.clientY;
+
+		if (!state.dragging) {
+			const dx = touch.clientX - state.startX;
+			const dy = touch.clientY - state.startY;
+			if (Math.hypot(dx, dy) < TOUCH_MOVE_THRESHOLD_PX) return;
+			// Movement beat the hold: this is a drag, not a long press.
+			window.clearTimeout(state.longPressTimer);
+			this.startTouchDrag(state);
+		}
+
+		// Now that it's a drag, take over from whatever the browser would
+		// otherwise do with this touch (scrolling the column, most likely).
+		event.preventDefault();
+		this.positionGhost(state);
+		this.updateTouchDropTarget(state);
+		this.updateAutoScroll(state);
+	}
+
+	private onCardTouchEnd(event: TouchEvent): void {
+		const state = this.touchDrag;
+		if (!state) return;
+		window.clearTimeout(state.longPressTimer);
+		if (state.dragging) {
+			event.preventDefault();
+			this.finishTouchDrag(state);
+		}
+		this.teardownTouchDrag(state);
+		this.touchDrag = null;
+	}
+
+	/** A cancelled touch (an incoming call, a system gesture) drops the card where it started. */
+	private cancelCardTouch(): void {
+		const state = this.touchDrag;
+		if (!state) return;
+		window.clearTimeout(state.longPressTimer);
+		this.teardownTouchDrag(state);
+		this.touchDrag = null;
+	}
+
+	private startTouchDrag(state: TouchDragState): void {
+		state.dragging = true;
+		state.cardEl.addClass("pmb-card-dragging");
+
+		const ghost = state.cardEl.cloneNode(true) as HTMLElement;
+		ghost.addClass("pmb-card-ghost");
+		ghost.style.width = `${state.cardEl.getBoundingClientRect().width}px`;
+		document.body.appendChild(ghost);
+		state.ghostEl = ghost;
+
+		// Runs for the whole drag rather than only while a scroll is wanted: a
+		// still finger near an edge still needs the column sliding underneath
+		// it re-checked as the drop target every frame, scrolling or not.
+		this.runAutoScrollLoop(state);
+	}
+
+	private positionGhost(state: TouchDragState): void {
+		if (!state.ghostEl) return;
+		const left = state.lastX - state.grabOffsetX;
+		const top = state.lastY - state.grabOffsetY;
+		state.ghostEl.style.transform = `translate(${left}px, ${top}px)`;
+	}
+
+	/** Highlights whichever column's card list currently sits under the finger. */
+	private updateTouchDropTarget(state: TouchDragState): void {
+		const el =
+			document
+				.elementFromPoint(state.lastX, state.lastY)
+				?.closest<HTMLElement>(".pmb-cards") ?? null;
+		if (el === state.dropEl) return;
+		state.dropEl?.removeClass("pmb-cards-drop-target");
+		el?.addClass("pmb-cards-drop-target");
+		state.dropEl = el;
+	}
+
+	/** Re-reads which way, if any, the lane under the finger should auto-scroll. */
+	private updateAutoScroll(state: TouchDragState): void {
+		const scrollEl =
+			document
+				.elementFromPoint(state.lastX, state.lastY)
+				?.closest<HTMLElement>(".pmb-lane-columns") ?? null;
+		const rect = scrollEl?.getBoundingClientRect();
+		state.scrollEl = scrollEl;
+		state.scrollDir = rect
+			? autoScrollDirection(rect, state.lastX, TOUCH_EDGE_SCROLL_ZONE_PX)
+			: 0;
+	}
+
+	/**
+	 * One loop for the whole drag, not started and stopped per edge crossing:
+	 * a stationary finger's own screen position never changes, so only this
+	 * per-frame loop notices the column sliding out from under it.
+	 */
+	private runAutoScrollLoop(state: TouchDragState): void {
+		const step = () => {
+			if (state !== this.touchDrag || !state.dragging) {
+				state.scrollRafId = null;
+				return;
+			}
+			if (state.scrollEl && state.scrollDir !== 0) {
+				state.scrollEl.scrollLeft += state.scrollDir * TOUCH_EDGE_SCROLL_SPEED_PX;
+				this.updateTouchDropTarget(state);
+			}
+			state.scrollRafId = window.requestAnimationFrame(step);
+		};
+		state.scrollRafId = window.requestAnimationFrame(step);
+	}
+
+	private finishTouchDrag(state: TouchDragState): void {
+		const dropEl = state.dropEl;
+		if (!dropEl) return;
+		const laneIndex = Number(dropEl.dataset.lane);
+		const columnIndex = Number(dropEl.dataset.column);
+		const column = this.lanes[laneIndex]?.columns[columnIndex];
+		if (!column) return;
+
+		const ordered = this.displayOrder(column.entries, state.config.orderProperty);
+		const index = insertionIndexAt(cardBounds(dropEl), state.lastY);
+		this.report(
+			this.moveCard(
+				state.entry.file.path,
+				column.key,
+				index,
+				ordered,
+				this.lanes[laneIndex].key,
+			),
+			"Could not move the card.",
+		);
+	}
+
+	private teardownTouchDrag(state: TouchDragState): void {
+		if (state.scrollRafId !== null) window.cancelAnimationFrame(state.scrollRafId);
+		state.dropEl?.removeClass("pmb-cards-drop-target");
+		state.cardEl.removeClass("pmb-card-dragging");
+		state.ghostEl?.remove();
 	}
 
 	private registerDropTarget(
@@ -947,7 +1199,7 @@ export class BoardView extends BasesView {
 	}
 
 	private showCardMenu(
-		event: MouseEvent,
+		position: { x: number; y: number },
 		entry: BasesEntry,
 		config: BoardConfig,
 		at: BoardPosition,
@@ -1078,7 +1330,7 @@ export class BoardView extends BasesView {
 				.onClick(() => this.report(this.deleteCard(entry), "Could not delete the card.")),
 		);
 
-		menu.showAtMouseEvent(event);
+		menu.showAtPosition(position);
 	}
 
 	private async editTags(entry: BasesEntry): Promise<void> {
@@ -1301,4 +1553,12 @@ function columnBounds(columnsEl: HTMLElement): { left: number; width: number }[]
 		const rect = child.getBoundingClientRect();
 		return { left: rect.left, width: rect.width };
 	});
+}
+
+/** The touch in a list matching a given identifier, or null once it has lifted. */
+function touchWithId(touches: TouchList, id: number): Touch | null {
+	for (let index = 0; index < touches.length; index++) {
+		if (touches[index].identifier === id) return touches[index];
+	}
+	return null;
 }

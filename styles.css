@@ -228,6 +228,19 @@
 	cursor: grabbing;
 }
 
+/* A touch drag's floating copy: the original stays put, dimmed by
+   .pmb-card-dragging above, while this one tracks the finger on top of
+   everything else on the board. Position comes entirely from the transform
+   a touch move sets, so top/left just anchor it to the viewport once. */
+.pmb-card-ghost {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 100;
+	pointer-events: none;
+	box-shadow: var(--shadow-l);
+}
+
 .pmb-card:hover {
 	border-color: var(--background-modifier-border-hover);
 	background-color: var(--background-primary-alt);
@@ -348,6 +361,14 @@
 	.pmb-column {
 		flex-basis: min(86vw, 340px);
 		scroll-snap-align: start;
+	}
+
+	/* The board runs its own long-press-vs-drag gesture on a card (see
+	   board-view.ts); the browser's own text-selection callout and highlight
+	   would otherwise fire from the same hold and fight it. */
+	.pmb-card {
+		-webkit-touch-callout: none;
+		user-select: none;
 	}
 
 	.pmb-card-cover {

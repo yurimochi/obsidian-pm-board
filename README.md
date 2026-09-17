@@ -38,6 +38,7 @@ These are the things PM-Board sets out to do differently:
 - [x] Moving cards without a pointer or a drag
 - [x] Mobile layout
 - [x] Column header: add, rename, recolor, WIP limit, delete, drag to reorder
+- [x] Touch dragging on mobile: a still hold opens the card menu, a moving one drags the card
 - [ ] Tag view with filtering somewhere on the board
 - [ ] Projects: a way to group cards by a property, above individual boards
 - [ ] Move board settings into the plugin's own settings tab, instead of
@@ -45,6 +46,8 @@ These are the things PM-Board sets out to do differently:
 - [ ] Experience polish:
       - Better tag colour editing than a raw hex prompt
       - Smoother scrolling on mobile's horizontal column strip
+      - Touch drag-to-reorder for columns (cards already have it; the header's
+        grip handle is still pointer-only)
 
 ## Swimlanes
 
@@ -84,11 +87,13 @@ column and position.
 
 ## Touch and mobile
 
-Dragging uses HTML5 drag and drop, which touch devices do not fire. Rather
-than reimplement dragging for touch, every move is also available from the
-card's context menu, which Obsidian raises on a long press: it lists the
-board's columns, and its lanes when swimlanes are on, alongside the open
-actions.
+Cards drag on mobile too, just not with HTML5 drag and drop, which touch
+devices don't fire: a still hold opens the card's context menu (the same one
+described below), while a hold that starts moving instead drags the card,
+following the finger, within its column or into another one. Dragging near
+the left or right edge of the screen auto-scrolls the lane sideways to reach
+a column further off. This is entirely separate from the desktop experience,
+which keeps its own native drag and right-click menu untouched.
 
 On a narrow screen a column nearly fills the width and the board is swiped
 sideways between columns, so a column is readable rather than half visible.
@@ -204,10 +209,16 @@ to a rendered, read-only preview with an **Open note** button instead.
 - **Keyboard support is unverified.** The navigation and move logic is covered
   by tests, but the wiring between a keypress and the board has not been
   exercised in a running vault. Treat it as unfinished.
-- **Touch dragging is not implemented**, deliberately; use the card menu.
 - **The card's checkbox has no keyboard access.** It is not given its own tab
   stop, since the board is deliberately one tab stop per card; there is no
   keyboard path to toggle it yet.
+- **Touch dragging is unverified in a vault.** It runs its own gesture
+  (`board-view.ts`'s touch handlers) rather than the browser's native
+  long-press, since a native long press can't be cancelled once it has
+  started and tell a hold from a drag. Confirmed working through manual
+  reasoning and the geometry it's built on (`autoScrollDirection` is
+  covered by tests), but the touch sequence itself has not been exercised
+  on a phone.
 - **Column drag-to-reorder has no touch or keyboard alternative.** Unlike
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through

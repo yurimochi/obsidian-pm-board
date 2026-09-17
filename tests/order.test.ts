@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	adjustIndexForRemoval,
+	autoScrollDirection,
 	columnInsertionIndexAt,
 	compareOrderKeys,
 	insertionIndexAt,
@@ -265,5 +266,30 @@ describe("reorderIndexFor", () => {
 
 	it("is a no-op when the column would land back where it started", () => {
 		expect(reorderIndexFor(1, 1)).toBe(1);
+	});
+});
+
+describe("autoScrollDirection", () => {
+	const container = { left: 100, right: 300 };
+
+	it("scrolls left once within the edge zone of the left side", () => {
+		expect(autoScrollDirection(container, 110, 20)).toBe(-1);
+	});
+
+	it("scrolls right once within the edge zone of the right side", () => {
+		expect(autoScrollDirection(container, 290, 20)).toBe(1);
+	});
+
+	it("stays put in the middle", () => {
+		expect(autoScrollDirection(container, 200, 20)).toBe(0);
+	});
+
+	it("stays put exactly at the edge of a zone", () => {
+		expect(autoScrollDirection(container, 120, 20)).toBe(0);
+		expect(autoScrollDirection(container, 280, 20)).toBe(0);
+	});
+
+	it("prefers the left zone when the container is narrower than both zones", () => {
+		expect(autoScrollDirection({ left: 100, right: 110 }, 105, 20)).toBe(-1);
 	});
 });
