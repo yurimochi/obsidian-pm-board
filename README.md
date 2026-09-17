@@ -48,6 +48,10 @@ These are the things PM-Board sets out to do differently:
       - Smoother scrolling on mobile's horizontal column strip
       - Touch drag-to-reorder for columns (cards already have it; the header's
         grip handle is still pointer-only)
+      - Touch dragging a card feels held back by the card menu itself: on a
+        phone the menu is its own modal-like overlay, and something about it
+        loading gets in the way of the drag, confirmed in a real vault. Kept
+        as-is for now; needs a proper look at why the two interfere
 
 ## Swimlanes
 
@@ -212,13 +216,11 @@ to a rendered, read-only preview with an **Open note** button instead.
 - **The card's checkbox has no keyboard access.** It is not given its own tab
   stop, since the board is deliberately one tab stop per card; there is no
   keyboard path to toggle it yet.
-- **Touch dragging is unverified in a vault.** It runs its own gesture
-  (`board-view.ts`'s touch handlers) rather than the browser's native
-  long-press, since a native long press can't be cancelled once it has
-  started and tell a hold from a drag. Confirmed working through manual
-  reasoning and the geometry it's built on (`autoScrollDirection` is
-  covered by tests), but the touch sequence itself has not been exercised
-  on a phone.
+- **Touch dragging a card is rough around the edges.** Confirmed in a real
+  vault: the still-hold-opens-the-menu half works, but dragging feels held
+  back by the menu itself — on a phone it's its own modal-like overlay, and
+  something about it loading interferes with the drag already in progress.
+  Left as-is for now; see the roadmap's Experience polish bucket.
 - **Column drag-to-reorder has no touch or keyboard alternative.** Unlike
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through
