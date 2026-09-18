@@ -751,3 +751,31 @@
 	gap: var(--size-4-2);
 	margin-top: var(--size-4-3);
 }
+
+.pmb-project-picker-list {
+	display: flex;
+	flex-direction: column;
+	max-height: 300px;
+	overflow-y: auto;
+	margin-top: var(--size-4-3);
+}
+
+.pmb-project-picker-item {
+	padding: var(--size-4-2) var(--size-4-3);
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+
+.pmb-project-picker-item:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.pmb-project-picker-item-active {
+	color: var(--text-accent);
+	font-weight: var(--font-medium);
+}
+
+.pmb-project-picker-empty {
+	padding: var(--size-4-2) var(--size-4-3);
+	color: var(--text-muted);
+}

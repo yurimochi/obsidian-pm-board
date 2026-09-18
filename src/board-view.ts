@@ -28,6 +28,7 @@ import {
 	setColumnMapValue,
 	setColumnOrder,
 	setListFilter,
+	setProjectFilter,
 } from "./board-config";
 import { cardTitle, renderCard, renderListRow, valuesOf } from "./card";
 import { CardDetailModal } from "./card-detail-modal";
@@ -55,9 +56,17 @@ import {
 	resolveOrderKey,
 	sortByOrderKey,
 } from "./order";
+import { ProjectPickerModal } from "./project-picker-modal";
 import { PromptModal } from "./prompt-modal";
 import { addDays, columnDateLabel, isoDate, nextWeekStart } from "./schedule";
-import { buildLanes, Lane, LaneColumn, mergeOverdueColumns, OVERDUE_COLUMN_KEY } from "./swimlanes";
+import {
+	buildLanes,
+	filterLaneEntries,
+	Lane,
+	LaneColumn,
+	mergeOverdueColumns,
+	OVERDUE_COLUMN_KEY,
+} from "./swimlanes";
 import { applyPlaceholders, joinPath, uniqueName } from "./template";
 import { parseTagList } from "./tag-colors";
 
@@ -169,6 +178,16 @@ export class BoardView extends BasesView {
 		// being one of the chips shown on a card.
 		const allEntries = this.data.data;
 		const filterProperties = [...new Set([...properties, ...this.allProperties])];
+		const showFilterBar = filterProperties.length > 0 || config.projectProperty !== null;
+
+		// The project filter narrows either view down to one project's cards;
+		// unset, it accepts everything, the same as "All projects" would.
+		const projectProperty = config.projectProperty;
+		const projectFilterValue = config.projectFilterValue;
+		const matchesProject = (entry: BasesEntry): boolean =>
+			!projectProperty ||
+			!projectFilterValue ||
+			textValueOf(entry, projectProperty) === projectFilterValue;
 
 		this.boardEl.empty();
 
@@ -180,12 +199,12 @@ export class BoardView extends BasesView {
 		if (listProperty && listValue) {
 			this.lanes = [];
 			this.boardEl.removeClass("pmb-board-laned");
-			if (filterProperties.length > 0) {
-				this.renderListFilter(this.boardEl, config, filterProperties, allEntries);
+			if (showFilterBar) {
+				this.renderFilterBar(this.boardEl, config, filterProperties, allEntries);
 			}
-			const matching = allEntries.filter((entry) =>
-				matchesListFilter(entry, listProperty, listValue),
-			);
+			const matching = allEntries
+				.filter((entry) => matchesListFilter(entry, listProperty, listValue))
+				.filter(matchesProject);
 			this.renderListView(this.boardEl, config, properties, matching, listValue);
 			this.updateTabStops();
 			this.restoreFocus();
@@ -204,11 +223,14 @@ export class BoardView extends BasesView {
 		if (this.dateGrouped) {
 			lanes = mergeOverdueColumns(lanes, isoDate(new Date()));
 		}
+		if (projectProperty && projectFilterValue) {
+			lanes = filterLaneEntries(lanes, matchesProject);
+		}
 
 		this.lanes = lanes;
 		this.boardEl.toggleClass("pmb-board-laned", lanes.length > 1 || laneProperty !== null);
-		if (filterProperties.length > 0) {
-			this.renderListFilter(this.boardEl, config, filterProperties, allEntries);
+		if (showFilterBar) {
+			this.renderFilterBar(this.boardEl, config, filterProperties, allEntries);
 		}
 		lanes.forEach((lane, laneIndex) => {
 			this.renderLane(this.boardEl as HTMLElement, lane, config, properties, laneIndex);
@@ -306,18 +328,25 @@ export class BoardView extends BasesView {
 	}
 
 	/**
-	 * The board's own header: box 1 picks a property, box 2 (once box 1 names
-	 * one) lists its distinct values, and picking one of those filters the
-	 * board to it. Both are buttons that open a Menu, the same control every
-	 * other part of the board already uses, rather than a bare `<select>`.
+	 * The board's own header: an optional project picker on the left, then the
+	 * generic property filter — box 1 picks a property, box 2 (once box 1
+	 * names one) lists its distinct values, and picking one of those filters
+	 * the board to it. The property/value pair are buttons that open a Menu,
+	 * the same control every other part of the board already uses, rather
+	 * than a bare `<select>`; the project picker opens a searchable modal
+	 * instead, since Menu cannot embed a text input.
 	 */
-	private renderListFilter(
+	private renderFilterBar(
 		parentEl: HTMLElement,
 		config: BoardConfig,
 		properties: BasesPropertyId[],
 		entries: BasesEntry[],
 	): void {
 		const filterEl = parentEl.createDiv({ cls: "pmb-filter" });
+
+		if (config.projectProperty) {
+			this.renderProjectFilter(filterEl, config, config.projectProperty, entries);
+		}
 
 		const propertyBtn = this.filterButton(
 			filterEl,
@@ -382,6 +411,34 @@ export class BoardView extends BasesView {
 			}
 			menu.showAtMouseEvent(event);
 		});
+	}
+
+	/** The project picker: a button opening a searchable modal to filter the board to one project. */
+	private renderProjectFilter(
+		parentEl: HTMLElement,
+		config: BoardConfig,
+		projectProperty: BasesPropertyId,
+		entries: BasesEntry[],
+	): void {
+		const projectBtn = this.filterButton(parentEl, config.projectFilterValue ?? "All projects");
+		this.registerDomEvent(projectBtn, "click", () => {
+			this.report(
+				this.pickProject(config, projectProperty, entries),
+				"Could not filter by project.",
+			);
+		});
+	}
+
+	private async pickProject(
+		config: BoardConfig,
+		projectProperty: BasesPropertyId,
+		entries: BasesEntry[],
+	): Promise<void> {
+		const projects = distinctListValues(entries, projectProperty);
+		const picked = await ProjectPickerModal.pick(this.app, projects, config.projectFilterValue);
+		if (picked === undefined) return;
+		setProjectFilter(this.config, picked);
+		if (!this.notifyConfigChanged()) this.onDataUpdated();
 	}
 
 	private filterButton(parentEl: HTMLElement, label: string): HTMLButtonElement {

@@ -52,6 +52,24 @@ export function buildLanes(
 	}));
 }
 
+/**
+ * Narrows every lane's columns down to the entries a predicate accepts,
+ * keeping every lane and column in place, even ones left with nothing, so
+ * filtering never collapses the board's shape out from under it.
+ */
+export function filterLaneEntries(
+	lanes: Lane[],
+	predicate: (entry: BasesEntry) => boolean,
+): Lane[] {
+	return lanes.map((lane) => ({
+		key: lane.key,
+		columns: lane.columns.map((column) => ({
+			key: column.key,
+			entries: column.entries.filter(predicate),
+		})),
+	}));
+}
+
 /** The synthetic column every column keyed before today is merged into. */
 export const OVERDUE_COLUMN_KEY = "Overdue";
 
