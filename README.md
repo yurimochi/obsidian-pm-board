@@ -7,7 +7,7 @@ kanban-style board whose columns come from the Base's own `groupBy`
 configuration. Cards are your notes; moving a card writes the change straight
 back to the note's frontmatter.
 
-> **Status: early development (0.5.3).** Everything on the roadmap below is
+> **Status: early development (0.6.0).** Everything on the roadmap below is
 > built, and most of it confirmed working in a running vault. See
 > **Known gaps** for what hasn't been yet.
 
@@ -39,12 +39,15 @@ These are the things PM-Board sets out to do differently:
 - [x] Mobile layout
 - [x] Column header: add, rename, recolor, WIP limit, delete, drag to reorder
 - [x] Touch dragging on mobile: a still hold opens the card menu, a moving one drags the card
-- [x] Filter the board to one value of a property (tags included): two
-      buttons in the board's own header, one to pick the property, one for
-      the value
+- [x] Filter the board to one value of a property (tags included): choosing
+      both a property and a value switches the board to a flat List view
 - [x] Overdue: on a date-grouped board, yesterday and earlier collapse into
       one leading column instead of growing a new one every day
-- [ ] Projects: a way to group cards by a property, above individual boards
+- [x] A fixed light/dark visual palette, independent of the installed
+      Obsidian theme, following Obsidian's own light/dark toggle
+- [x] Priority badges (P1-P4) on cards
+- [x] Projects: a property that groups cards under a project, filterable from
+      a searchable picker in the board's header
 - [ ] Move board settings into the plugin's own settings tab, instead of
       hand-edited `.base` YAML
 - [ ] Experience polish:
@@ -82,14 +85,61 @@ rather than to the column as a whole.
 
 Two buttons in the board's own header. The first lists every property the
 query has, tags included; picking one adds the second, listing every
-distinct value that property holds across the board. Picking one of those
-hides every card that doesn't carry it, in every lane and column, leaving the
-rest of the board otherwise unchanged. Both buttons read "No filter" and
-"All values" to show everything again.
+distinct value that property holds across the board. Picking a specific
+value replaces the kanban entirely with a flat **List view**: every matching
+card, sorted, in one column, rather than narrowed columns spread across the
+board. Both buttons read "No filter" and "All values" to show the kanban
+again.
 
 Both the property and the chosen value are written to the board's own
 settings, the same as a collapsed column or a WIP limit, so the filter is
 still applied the next time the board opens.
+
+## Cards
+
+A card leads with a status ring — a plain outline, or a fillable checkbox
+when a boolean property is configured — followed by its title. Above that,
+when configured, sits a project name and a priority badge; below, a row of
+tag chips and any other visible properties. A card in the Overdue column
+also carries its own date, since the column itself no longer names one.
+
+The board's colours are fixed, not derived from the installed Obsidian
+theme: a light and a dark palette baked into the plugin, switching with
+Obsidian's own light/dark appearance setting rather than a community theme's
+variables. The one exception is the card detail and rename/tag-edit modals,
+which still follow Obsidian's native modal styling.
+
+### Priority
+
+Set `priorityProperty` on the view to show a coloured `P1`-`P4` badge on
+each card. Values are matched case-insensitively; anything else is treated
+as unset and shows no badge.
+
+```yaml
+views:
+  - type: pm-board
+    name: Delivery
+    priorityProperty: priority
+```
+
+### Projects
+
+Set `projectProperty` on the view to show a card's project (a folder icon
+plus its text value) and to add a searchable **project picker** to the
+board's header. Picking a project there filters the board to that project's
+cards alone — in the kanban or the List view alike, alongside whatever other
+filter is active — rather than switching views the way the property filter
+does.
+
+```yaml
+views:
+  - type: pm-board
+    name: Delivery
+    projectProperty: project
+```
+
+This is a flat property: there is no parent/subproject hierarchy, and the
+picker lists every distinct value as one unstructured, searchable list.
 
 ## Keyboard
 
@@ -185,8 +235,9 @@ A column's header carries more than its name and count:
 - **Clicking the header** collapses or expands a column, except on a
   date-grouped board: every column, Overdue included, stays expanded there,
   since collapsing one just hides cards from landing or leaving on their own.
-- **+** adds a card straight to that column, collapsed or not. Hidden on
-  Overdue, which has no date of its own for a new card to take.
+- **+** adds a card straight to that column, collapsed or not. Overdue shows
+  a **Reschedule** link in its place instead, matching the design; it is not
+  wired to anything yet.
 - **⋯** opens a menu for renaming, recolouring, a WIP limit, and deleting
   the column. Missing entirely on a date-grouped board — a date can't be
   renamed, and there's nowhere left for the other three once that one's
@@ -243,6 +294,12 @@ to a rendered, read-only preview with an **Open note** button instead.
 
 ## Known gaps
 
+- **The visual redesign, List view, priority badges, and project picker are
+  unverified in a real vault.** They're covered by lint, the unit test
+  suite, and a clean build, but have not yet been exercised against a live
+  Base with real frontmatter and Obsidian's actual light/dark toggle.
+- **Overdue's Reschedule link has no action yet.** It's shown for visual
+  parity with the design it's adapted from; clicking it does nothing.
 - **Keyboard support is unverified.** The navigation and move logic is covered
   by tests, but the wiring between a keypress and the board has not been
   exercised in a running vault. Treat it as unfinished.
