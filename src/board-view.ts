@@ -171,6 +171,23 @@ export class BoardView extends BasesView {
 		// narrowing the filter never shrinks what it can be widened back to.
 		const allEntries = this.data.data;
 		const filterableProperties = listProperties(properties, allEntries);
+		// TEMPORARY: diagnosing why no property is being detected as a list on
+		// a real vault where one clearly should be. Safe to remove once fixed.
+		console.debug("PM-Board list filter diagnostics", {
+			properties,
+			entryCount: allEntries.length,
+			filterableProperties,
+			sample: properties.map((property) => {
+				const first = allEntries.find((entry) => entry.getValue(property));
+				const value = first?.getValue(property);
+				return {
+					property,
+					constructorName: value?.constructor?.name ?? null,
+					isListValue: value instanceof ListValue,
+					text: value?.toString() ?? null,
+				};
+			}),
+		});
 		if (config.listFilterProperty && config.listFilterValue) {
 			const property = config.listFilterProperty;
 			const value = config.listFilterValue;
