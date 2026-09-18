@@ -28,7 +28,7 @@ interface CardParts {
 	priority: PriorityLabel | null;
 }
 
-/** Splits an entry's visible properties into the pieces the kanban card and the list row both render, differently arranged. */
+/** Splits an entry's visible properties into the pieces a card renders. */
 function collectCardParts(
 	entry: BasesEntry,
 	config: BoardConfig,
@@ -99,7 +99,7 @@ export function renderCard(
 	}
 
 	const mainEl = cardEl.createDiv({ cls: "pmb-card-main" });
-	renderStatus(mainEl, "pmb-card-status", checkbox, !!isOverdue);
+	renderStatus(mainEl, checkbox, !!isOverdue);
 	mainEl.createDiv({ cls: "pmb-card-title", text: cardTitle(entry, config) });
 
 	if (chips.length > 0 || tags.length > 0) {
@@ -117,60 +117,9 @@ export function renderCard(
 	return { cardEl, checkboxProperty };
 }
 
-/**
- * A task row for the List view: the same status ring, project/priority and
- * tags a kanban card shows, laid out horizontally instead — title inline
- * with the status ring, tags trailing right-aligned, a column's date (where
- * the card's own group-by column would have shown one) at the far right.
- */
-export function renderListRow(
-	parentEl: HTMLElement,
-	entry: BasesEntry,
-	config: BoardConfig,
-	properties: BasesPropertyId[],
-	ctx: RenderContext,
-	isOverdue: boolean,
-	dateText: string | null,
-): RenderedCard {
-	const rowEl = parentEl.createDiv({ cls: "pmb-list-row" });
-
-	const { tags, chips, checkbox, checkboxProperty, project, priority } = collectCardParts(
-		entry,
-		config,
-		properties,
-	);
-
-	renderStatus(rowEl, "pmb-list-status", checkbox, isOverdue);
-
-	const bodyEl = rowEl.createDiv({ cls: "pmb-list-body" });
-	if (project || priority) {
-		const topEl = bodyEl.createDiv({ cls: "pmb-list-top" });
-		if (project) renderProject(topEl, project);
-		if (priority) renderPriorityBadge(topEl, priority);
-	}
-	bodyEl.createDiv({ cls: "pmb-list-title", text: cardTitle(entry, config) });
-
-	if (tags.length > 0 || chips.length > 0) {
-		const metaEl = rowEl.createDiv({ cls: "pmb-list-meta" });
-		if (tags.length > 0) renderTags(metaEl, tags, config);
-		if (chips.length > 0) renderChips(metaEl, chips, ctx);
-	}
-
-	if (dateText) {
-		rowEl.createDiv({ cls: "pmb-list-date", text: dateText });
-	}
-
-	return { cardEl: rowEl, checkboxProperty };
-}
-
-/** The status ring both a card and a list row lead with, doubling as a checkbox when one backs it. */
-function renderStatus(
-	parentEl: HTMLElement,
-	cls: string,
-	checkbox: Value | null,
-	isOverdue: boolean,
-): void {
-	const statusEl = parentEl.createDiv({ cls });
+/** The card's status ring, doubling as a checkbox when a boolean property backs it. */
+function renderStatus(parentEl: HTMLElement, checkbox: Value | null, isOverdue: boolean): void {
+	const statusEl = parentEl.createDiv({ cls: "pmb-card-status" });
 	statusEl.toggleClass("pmb-status-overdue", isOverdue);
 	if (checkbox) {
 		statusEl.addClass("pmb-status-checkbox");

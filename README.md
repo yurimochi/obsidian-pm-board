@@ -39,8 +39,9 @@ These are the things PM-Board sets out to do differently:
 - [x] Mobile layout
 - [x] Column header: add, rename, recolor, WIP limit, delete, drag to reorder
 - [x] Touch dragging on mobile: a still hold opens the card menu, a moving one drags the card
-- [x] Filter the board to one value of a property (tags included): choosing
-      both a property and a value switches the board to a flat List view
+- [x] Filter the board to one value of a property (tags included): two
+      buttons in the board's own header, one to pick the property, one for
+      the value
 - [x] Overdue: on a date-grouped board, yesterday and earlier collapse into
       one leading column instead of growing a new one every day
 - [x] A fixed light/dark visual palette, independent of the installed
@@ -85,11 +86,12 @@ rather than to the column as a whole.
 
 Two buttons in the board's own header. The first lists every property the
 query has, tags included; picking one adds the second, listing every
-distinct value that property holds across the board. Picking a specific
-value replaces the kanban entirely with a flat **List view**: every matching
-card, sorted, in one column, rather than narrowed columns spread across the
-board. Both buttons read "No filter" and "All values" to show the kanban
-again.
+distinct value that property holds across the board. Picking one of those
+hides every card that doesn't carry it, in every lane and column, leaving the
+rest of the board otherwise unchanged. Both buttons read "No filter" and
+"All values" to show everything again. The project picker (below) composes
+with this filter rather than replacing it: both narrow the same board
+together.
 
 Both the property and the chosen value are written to the board's own
 settings, the same as a collapsed column or a WIP limit, so the filter is
@@ -112,8 +114,8 @@ which still follow Obsidian's native modal styling.
 ### Priority
 
 Set `priorityProperty` on the view to show a coloured `P1`-`P4` badge on
-each card. Values are matched case-insensitively; anything else is treated
-as unset and shows no badge.
+each card. Accepts `P1`-`P4` case-insensitively, or the bare digit `1`-`4`;
+anything else is treated as unset and shows no badge.
 
 ```yaml
 views:
@@ -126,10 +128,8 @@ views:
 
 Set `projectProperty` on the view to show a card's project (a folder icon
 plus its text value) and to add a searchable **project picker** to the
-board's header. Picking a project there filters the board to that project's
-cards alone — in the kanban or the List view alike, alongside whatever other
-filter is active — rather than switching views the way the property filter
-does.
+board's header. Picking a project there narrows the board to that project's
+cards, composing with the property filter above rather than replacing it.
 
 ```yaml
 views:
@@ -294,10 +294,12 @@ to a rendered, read-only preview with an **Open note** button instead.
 
 ## Known gaps
 
-- **The visual redesign, List view, priority badges, and project picker are
-  unverified in a real vault.** They're covered by lint, the unit test
-  suite, and a clean build, but have not yet been exercised against a live
-  Base with real frontmatter and Obsidian's actual light/dark toggle.
+- **The visual redesign, priority badges, and project picker are only
+  partly verified in a real vault.** A first pass in a live Base found a
+  couple of real bugs (priority values stored as a bare digit, filtering
+  switching to a since-reverted List view, a stray background behind a
+  date column's title), fixed here; the rest is still unconfirmed beyond
+  lint, the unit test suite, and a clean build.
 - **Overdue's Reschedule link has no action yet.** It's shown for visual
   parity with the design it's adapted from; clicking it does nothing.
 - **Keyboard support is unverified.** The navigation and move logic is covered

@@ -30,7 +30,7 @@ import {
 	setListFilter,
 	setProjectFilter,
 } from "./board-config";
-import { cardTitle, renderCard, renderListRow, valuesOf } from "./card";
+import { cardTitle, renderCard, valuesOf } from "./card";
 import { CardDetailModal } from "./card-detail-modal";
 import { groupKeyOf, sortGroups } from "./column-order";
 import { ConfirmModal } from "./confirm-modal";
@@ -180,36 +180,19 @@ export class BoardView extends BasesView {
 		const filterProperties = [...new Set([...properties, ...this.allProperties])];
 		const showFilterBar = filterProperties.length > 0 || config.projectProperty !== null;
 
-		// The project filter narrows either view down to one project's cards;
-		// unset, it accepts everything, the same as "All projects" would.
+		// The project filter and the generic property filter both narrow the
+		// same kanban down to matching cards; unset, either accepts everything.
 		const projectProperty = config.projectProperty;
 		const projectFilterValue = config.projectFilterValue;
-		const matchesProject = (entry: BasesEntry): boolean =>
-			!projectProperty ||
-			!projectFilterValue ||
-			textValueOf(entry, projectProperty) === projectFilterValue;
-
-		this.boardEl.empty();
-
-		// A specific value chosen (not "No filter"/"All values") replaces the
-		// kanban with a flat List view entirely, rather than just narrowing
-		// which cards a column shows.
 		const listProperty = config.listFilterProperty;
 		const listValue = config.listFilterValue;
-		if (listProperty && listValue) {
-			this.lanes = [];
-			this.boardEl.removeClass("pmb-board-laned");
-			if (showFilterBar) {
-				this.renderFilterBar(this.boardEl, config, filterProperties, allEntries);
-			}
-			const matching = allEntries
-				.filter((entry) => matchesListFilter(entry, listProperty, listValue))
-				.filter(matchesProject);
-			this.renderListView(this.boardEl, config, properties, matching, listValue);
-			this.updateTabStops();
-			this.restoreFocus();
-			return;
-		}
+		const matchesFilters = (entry: BasesEntry): boolean =>
+			(!projectProperty ||
+				!projectFilterValue ||
+				textValueOf(entry, projectProperty) === projectFilterValue) &&
+			(!listProperty || !listValue || matchesListFilter(entry, listProperty, listValue));
+
+		this.boardEl.empty();
 
 		let lanes = buildLanes(
 			groups,
@@ -223,8 +206,8 @@ export class BoardView extends BasesView {
 		if (this.dateGrouped) {
 			lanes = mergeOverdueColumns(lanes, isoDate(new Date()));
 		}
-		if (projectProperty && projectFilterValue) {
-			lanes = filterLaneEntries(lanes, matchesProject);
+		if ((projectProperty && projectFilterValue) || (listProperty && listValue)) {
+			lanes = filterLaneEntries(lanes, matchesFilters);
 		}
 
 		this.lanes = lanes;
@@ -237,94 +220,6 @@ export class BoardView extends BasesView {
 		});
 		this.updateTabStops();
 		this.restoreFocus();
-	}
-
-	/**
-	 * The List view: every card matching the header's filter, flattened out
-	 * of its lane and column entirely rather than just narrowed within one.
-	 */
-	private renderListView(
-		parentEl: HTMLElement,
-		config: BoardConfig,
-		properties: BasesPropertyId[],
-		entries: BasesEntry[],
-		value: string,
-	): void {
-		const listEl = parentEl.createDiv({ cls: "pmb-list" });
-
-		const headerEl = listEl.createDiv({ cls: "pmb-list-header" });
-		headerEl.createSpan({ cls: "pmb-list-header-title", text: value });
-		headerEl.createSpan({ cls: "pmb-list-header-count", text: String(entries.length) });
-
-		if (entries.length === 0) {
-			listEl.createDiv({ cls: "pmb-list-empty", text: "No cards for this value." });
-			return;
-		}
-
-		for (const entry of entries) {
-			this.renderTaskRow(listEl, entry, config, properties);
-		}
-	}
-
-	private renderTaskRow(
-		parentEl: HTMLElement,
-		entry: BasesEntry,
-		config: BoardConfig,
-		properties: BasesPropertyId[],
-	): void {
-		const { isOverdue, label } = this.dateInfoFor(entry);
-		const { cardEl: rowEl, checkboxProperty } = renderListRow(
-			parentEl,
-			entry,
-			config,
-			properties,
-			this.renderContext,
-			isOverdue,
-			label,
-		);
-		rowEl.tabIndex = 0;
-		rowEl.dataset.path = entry.file.path;
-		rowEl.setAttribute("role", "listitem");
-		rowEl.setAttribute("aria-label", cardTitle(entry, config));
-
-		if (checkboxProperty) {
-			const checkboxEl = rowEl.querySelector<HTMLElement>(".pmb-status-checkbox");
-			if (checkboxEl) {
-				this.registerDomEvent(checkboxEl, "click", (event) => {
-					event.stopPropagation();
-					this.report(
-						this.toggleCheckbox(entry, checkboxProperty),
-						"Could not update the checkbox.",
-					);
-				});
-			}
-		}
-
-		this.registerDomEvent(rowEl, "click", (event) =>
-			this.openEntry(entry, config, {
-				mod: Keymap.isModEvent(event) !== false,
-				alt: event.altKey,
-			}),
-		);
-		this.registerDomEvent(rowEl, "keydown", (event) => {
-			if (event.key !== "Enter") return;
-			event.preventDefault();
-			this.openEntry(entry, config, { mod: false, alt: false });
-		});
-	}
-
-	/**
-	 * Whether an entry is overdue and the label its own group-by column would
-	 * carry, for a List view row — a flat list has no column of its own to
-	 * read either off of.
-	 */
-	private dateInfoFor(entry: BasesEntry): { isOverdue: boolean; label: string | null } {
-		if (!this.dateGrouped) return { isOverdue: false, label: null };
-		const groupProperty = groupByPropertyOf(this.config) as BasesPropertyId | null;
-		const key = groupProperty ? textValueOf(entry, groupProperty) : null;
-		if (key === null) return { isOverdue: false, label: null };
-		if (key < isoDate(new Date())) return { isOverdue: true, label: "Overdue" };
-		return { isOverdue: false, label: this.columnTitle(key) };
 	}
 
 	/**

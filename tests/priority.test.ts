@@ -14,10 +14,16 @@ describe("priorityOf", () => {
 		expect(priorityOf("p4")).toBe("P4");
 	});
 
+	it("accepts a bare digit 1-4", () => {
+		expect(priorityOf("1")).toBe("P1");
+		expect(priorityOf("4")).toBe("P4");
+	});
+
 	it("rejects anything else", () => {
 		expect(priorityOf("P5")).toBeNull();
 		expect(priorityOf("High")).toBeNull();
-		expect(priorityOf("1")).toBeNull();
+		expect(priorityOf("5")).toBeNull();
+		expect(priorityOf("0")).toBeNull();
 	});
 
 	it("treats an absent value as no priority", () => {
