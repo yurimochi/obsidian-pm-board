@@ -29,7 +29,7 @@ import {
 	setColumnOrder,
 	setListFilter,
 } from "./board-config";
-import { cardTitle, renderCard, valuesOf } from "./card";
+import { cardTitle, renderCard, renderListRow, valuesOf } from "./card";
 import { CardDetailModal } from "./card-detail-modal";
 import { groupKeyOf, sortGroups } from "./column-order";
 import { ConfirmModal } from "./confirm-modal";
@@ -57,14 +57,7 @@ import {
 } from "./order";
 import { PromptModal } from "./prompt-modal";
 import { addDays, columnDateLabel, isoDate, nextWeekStart } from "./schedule";
-import {
-	buildLanes,
-	filterLanes,
-	Lane,
-	LaneColumn,
-	mergeOverdueColumns,
-	OVERDUE_COLUMN_KEY,
-} from "./swimlanes";
+import { buildLanes, Lane, LaneColumn, mergeOverdueColumns, OVERDUE_COLUMN_KEY } from "./swimlanes";
 import { applyPlaceholders, joinPath, uniqueName } from "./template";
 import { parseTagList } from "./tag-colors";
 
@@ -168,6 +161,37 @@ export class BoardView extends BasesView {
 		// the two silently fighting over the same axis.
 		this.sortActive = this.config.getSort().length > 0;
 
+		// Both the property and its values come from every entry the query
+		// returned, not the (possibly already filtered) lanes, so narrowing the
+		// filter never shrinks what it can be widened back to. Candidates are
+		// every property the dataset has, not just the ones toggled visible on
+		// the board: a property can hold values worth filtering by without
+		// being one of the chips shown on a card.
+		const allEntries = this.data.data;
+		const filterProperties = [...new Set([...properties, ...this.allProperties])];
+
+		this.boardEl.empty();
+
+		// A specific value chosen (not "No filter"/"All values") replaces the
+		// kanban with a flat List view entirely, rather than just narrowing
+		// which cards a column shows.
+		const listProperty = config.listFilterProperty;
+		const listValue = config.listFilterValue;
+		if (listProperty && listValue) {
+			this.lanes = [];
+			this.boardEl.removeClass("pmb-board-laned");
+			if (filterProperties.length > 0) {
+				this.renderListFilter(this.boardEl, config, filterProperties, allEntries);
+			}
+			const matching = allEntries.filter((entry) =>
+				matchesListFilter(entry, listProperty, listValue),
+			);
+			this.renderListView(this.boardEl, config, properties, matching, listValue);
+			this.updateTabStops();
+			this.restoreFocus();
+			return;
+		}
+
 		let lanes = buildLanes(
 			groups,
 			groupKeyOf,
@@ -181,22 +205,7 @@ export class BoardView extends BasesView {
 			lanes = mergeOverdueColumns(lanes, isoDate(new Date()));
 		}
 
-		// Both the property and its values come from every entry the query
-		// returned, not the (possibly already filtered) lanes, so narrowing the
-		// filter never shrinks what it can be widened back to. Candidates are
-		// every property the dataset has, not just the ones toggled visible on
-		// the board: a property can hold values worth filtering by without
-		// being one of the chips shown on a card.
-		const allEntries = this.data.data;
-		const filterProperties = [...new Set([...properties, ...this.allProperties])];
-		if (config.listFilterProperty && config.listFilterValue) {
-			const property = config.listFilterProperty;
-			const value = config.listFilterValue;
-			lanes = filterLanes(lanes, (entry) => matchesListFilter(entry, property, value));
-		}
-
 		this.lanes = lanes;
-		this.boardEl.empty();
 		this.boardEl.toggleClass("pmb-board-laned", lanes.length > 1 || laneProperty !== null);
 		if (filterProperties.length > 0) {
 			this.renderListFilter(this.boardEl, config, filterProperties, allEntries);
@@ -206,6 +215,94 @@ export class BoardView extends BasesView {
 		});
 		this.updateTabStops();
 		this.restoreFocus();
+	}
+
+	/**
+	 * The List view: every card matching the header's filter, flattened out
+	 * of its lane and column entirely rather than just narrowed within one.
+	 */
+	private renderListView(
+		parentEl: HTMLElement,
+		config: BoardConfig,
+		properties: BasesPropertyId[],
+		entries: BasesEntry[],
+		value: string,
+	): void {
+		const listEl = parentEl.createDiv({ cls: "pmb-list" });
+
+		const headerEl = listEl.createDiv({ cls: "pmb-list-header" });
+		headerEl.createSpan({ cls: "pmb-list-header-title", text: value });
+		headerEl.createSpan({ cls: "pmb-list-header-count", text: String(entries.length) });
+
+		if (entries.length === 0) {
+			listEl.createDiv({ cls: "pmb-list-empty", text: "No cards for this value." });
+			return;
+		}
+
+		for (const entry of entries) {
+			this.renderTaskRow(listEl, entry, config, properties);
+		}
+	}
+
+	private renderTaskRow(
+		parentEl: HTMLElement,
+		entry: BasesEntry,
+		config: BoardConfig,
+		properties: BasesPropertyId[],
+	): void {
+		const { isOverdue, label } = this.dateInfoFor(entry);
+		const { cardEl: rowEl, checkboxProperty } = renderListRow(
+			parentEl,
+			entry,
+			config,
+			properties,
+			this.renderContext,
+			isOverdue,
+			label,
+		);
+		rowEl.tabIndex = 0;
+		rowEl.dataset.path = entry.file.path;
+		rowEl.setAttribute("role", "listitem");
+		rowEl.setAttribute("aria-label", cardTitle(entry, config));
+
+		if (checkboxProperty) {
+			const checkboxEl = rowEl.querySelector<HTMLElement>(".pmb-status-checkbox");
+			if (checkboxEl) {
+				this.registerDomEvent(checkboxEl, "click", (event) => {
+					event.stopPropagation();
+					this.report(
+						this.toggleCheckbox(entry, checkboxProperty),
+						"Could not update the checkbox.",
+					);
+				});
+			}
+		}
+
+		this.registerDomEvent(rowEl, "click", (event) =>
+			this.openEntry(entry, config, {
+				mod: Keymap.isModEvent(event) !== false,
+				alt: event.altKey,
+			}),
+		);
+		this.registerDomEvent(rowEl, "keydown", (event) => {
+			if (event.key !== "Enter") return;
+			event.preventDefault();
+			this.openEntry(entry, config, { mod: false, alt: false });
+		});
+	}
+
+	/**
+	 * Whether an entry is overdue and the label its own group-by column would
+	 * carry, for a List view row — a flat list has no column of its own to
+	 * read either off of.
+	 */
+	private dateInfoFor(entry: BasesEntry): { isOverdue: boolean; label: string | null } {
+		if (!this.dateGrouped) return { isOverdue: false, label: null };
+		const groupProperty = groupByPropertyOf(this.config) as BasesPropertyId | null;
+		const key = groupProperty ? textValueOf(entry, groupProperty) : null;
+		if (key === null) return { isOverdue: false, label: null };
+		if (key < isoDate(new Date())) return { isOverdue: true, label: "Overdue" };
+		return { isOverdue: false, label: this.columnTitle(key) };
 	}
 
 	/**
@@ -546,7 +643,7 @@ export class BoardView extends BasesView {
 		cardEl.setAttribute("aria-label", this.cardLabel(entry, config, at));
 
 		if (checkboxProperty) {
-			const checkboxEl = cardEl.querySelector<HTMLElement>(".pmb-card-checkbox");
+			const checkboxEl = cardEl.querySelector<HTMLElement>(".pmb-status-checkbox");
 			// Not given its own tab stop: the board is one tab stop per card,
 			// and a second focusable target per card would defeat that.
 			if (checkboxEl) {

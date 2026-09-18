@@ -422,7 +422,10 @@
 	align-items: flex-start;
 }
 
-.pmb-card-status {
+/* Shared between a kanban card's status ring and a List view row's: both
+   are built by the same renderStatus() in card.ts. */
+.pmb-card-status,
+.pmb-list-status {
 	box-sizing: border-box;
 	width: 16px;
 	height: 16px;
@@ -434,19 +437,19 @@
 	padding: 0;
 }
 
-.pmb-card-status-overdue {
+.pmb-status-overdue {
 	border-color: var(--pmb-accent);
 }
 
-.pmb-card-checkbox {
+.pmb-status-checkbox {
 	cursor: pointer;
 }
 
-.pmb-card-checkbox:hover {
+.pmb-status-checkbox:hover {
 	border-color: var(--pmb-accent);
 }
 
-.pmb-card-checkbox-checked {
+.pmb-status-checked {
 	background-color: var(--pmb-accent);
 	border-color: var(--pmb-accent);
 }
@@ -490,6 +493,103 @@
 .pmb-card-date-icon svg {
 	width: 100%;
 	height: 100%;
+}
+
+/* List view: replaces the kanban entirely while the header's filter names a
+   specific value, one flat row per matching card. */
+.pmb-list {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.pmb-list-header {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.pmb-list-header-title {
+	color: var(--pmb-text);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.pmb-list-header-count {
+	color: var(--pmb-text-muted-2);
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.pmb-list-empty {
+	color: var(--pmb-text-muted-3);
+	font-size: 12px;
+	padding: 32px 0;
+	text-align: center;
+}
+
+.pmb-list-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background-color: var(--pmb-surface);
+	border: 1px solid var(--pmb-border);
+	border-radius: var(--pmb-radius-card);
+	padding: 16px;
+	cursor: pointer;
+	box-sizing: border-box;
+}
+
+.pmb-list-row:hover {
+	border-color: var(--pmb-border-hover);
+}
+
+.pmb-list-row:focus-visible {
+	outline: 2px solid var(--pmb-accent);
+	outline-offset: 2px;
+}
+
+.pmb-list-body {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+}
+
+.pmb-list-top {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	color: var(--pmb-text-muted-1);
+	font-size: 12px;
+}
+
+.pmb-list-title {
+	color: var(--pmb-text);
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.35;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pmb-list-meta {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	row-gap: 4px;
+	column-gap: 6px;
+	flex: 0 1 auto;
+}
+
+.pmb-list-date {
+	flex: 0 0 auto;
+	color: var(--pmb-text-muted-3);
+	font-size: 12px;
+	white-space: nowrap;
 }
 
 /* On a phone a column that only shows part of itself is unreadable, so one

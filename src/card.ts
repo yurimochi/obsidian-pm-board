@@ -19,28 +19,21 @@ export interface RenderedCard {
 	checkboxProperty: BasesPropertyId | null;
 }
 
-export function renderCard(
-	parentEl: HTMLElement,
+interface CardParts {
+	tags: string[];
+	chips: Value[];
+	checkbox: Value | null;
+	checkboxProperty: BasesPropertyId | null;
+	project: string | null;
+	priority: PriorityLabel | null;
+}
+
+/** Splits an entry's visible properties into the pieces the kanban card and the list row both render, differently arranged. */
+function collectCardParts(
 	entry: BasesEntry,
 	config: BoardConfig,
 	properties: BasesPropertyId[],
-	ctx: RenderContext,
-	resolveCover?: (entry: BasesEntry) => string | null,
-	/** The Overdue column's own date, shown since the column no longer names one. */
-	dueDateText?: string | null,
-	/** Whether this card sits in the Overdue column, colouring its status ring. */
-	isOverdue?: boolean,
-): RenderedCard {
-	const cardEl = parentEl.createDiv({ cls: "pmb-card" });
-
-	const coverSrc = resolveCover?.(entry) ?? null;
-	if (coverSrc) {
-		const coverEl = cardEl.createEl("img", { cls: "pmb-card-cover" });
-		coverEl.src = coverSrc;
-		coverEl.alt = "";
-		coverEl.loading = "lazy";
-	}
-
+): CardParts {
 	const tags: string[] = [];
 	const chips: Value[] = [];
 	// The first checkbox-valued property found stands in for the card, the
@@ -68,6 +61,37 @@ export function renderCard(
 		? priorityOf(entry.getValue(config.priorityProperty)?.toString().trim())
 		: null;
 
+	return { tags, chips, checkbox, checkboxProperty, project, priority };
+}
+
+export function renderCard(
+	parentEl: HTMLElement,
+	entry: BasesEntry,
+	config: BoardConfig,
+	properties: BasesPropertyId[],
+	ctx: RenderContext,
+	resolveCover?: (entry: BasesEntry) => string | null,
+	/** The Overdue column's own date, shown since the column no longer names one. */
+	dueDateText?: string | null,
+	/** Whether this card sits in the Overdue column, colouring its status ring. */
+	isOverdue?: boolean,
+): RenderedCard {
+	const cardEl = parentEl.createDiv({ cls: "pmb-card" });
+
+	const coverSrc = resolveCover?.(entry) ?? null;
+	if (coverSrc) {
+		const coverEl = cardEl.createEl("img", { cls: "pmb-card-cover" });
+		coverEl.src = coverSrc;
+		coverEl.alt = "";
+		coverEl.loading = "lazy";
+	}
+
+	const { tags, chips, checkbox, checkboxProperty, project, priority } = collectCardParts(
+		entry,
+		config,
+		properties,
+	);
+
 	if (project || priority) {
 		const topEl = cardEl.createDiv({ cls: "pmb-card-top" });
 		if (project) renderProject(topEl, project);
@@ -75,16 +99,7 @@ export function renderCard(
 	}
 
 	const mainEl = cardEl.createDiv({ cls: "pmb-card-main" });
-	const statusEl = mainEl.createDiv({ cls: "pmb-card-status" });
-	statusEl.toggleClass("pmb-card-status-overdue", !!isOverdue);
-	if (checkbox) {
-		statusEl.addClass("pmb-card-checkbox");
-		// role="checkbox" collides with Obsidian's own native checkbox
-		// styling for that role, drawing a second ring over ours.
-		statusEl.setAttribute("role", "button");
-		statusEl.setAttribute("aria-pressed", String(checkbox.isTruthy()));
-		statusEl.toggleClass("pmb-card-checkbox-checked", checkbox.isTruthy());
-	}
+	renderStatus(mainEl, "pmb-card-status", checkbox, !!isOverdue);
 	mainEl.createDiv({ cls: "pmb-card-title", text: cardTitle(entry, config) });
 
 	if (chips.length > 0 || tags.length > 0) {
@@ -100,6 +115,71 @@ export function renderCard(
 	}
 
 	return { cardEl, checkboxProperty };
+}
+
+/**
+ * A task row for the List view: the same status ring, project/priority and
+ * tags a kanban card shows, laid out horizontally instead — title inline
+ * with the status ring, tags trailing right-aligned, a column's date (where
+ * the card's own group-by column would have shown one) at the far right.
+ */
+export function renderListRow(
+	parentEl: HTMLElement,
+	entry: BasesEntry,
+	config: BoardConfig,
+	properties: BasesPropertyId[],
+	ctx: RenderContext,
+	isOverdue: boolean,
+	dateText: string | null,
+): RenderedCard {
+	const rowEl = parentEl.createDiv({ cls: "pmb-list-row" });
+
+	const { tags, chips, checkbox, checkboxProperty, project, priority } = collectCardParts(
+		entry,
+		config,
+		properties,
+	);
+
+	renderStatus(rowEl, "pmb-list-status", checkbox, isOverdue);
+
+	const bodyEl = rowEl.createDiv({ cls: "pmb-list-body" });
+	if (project || priority) {
+		const topEl = bodyEl.createDiv({ cls: "pmb-list-top" });
+		if (project) renderProject(topEl, project);
+		if (priority) renderPriorityBadge(topEl, priority);
+	}
+	bodyEl.createDiv({ cls: "pmb-list-title", text: cardTitle(entry, config) });
+
+	if (tags.length > 0 || chips.length > 0) {
+		const metaEl = rowEl.createDiv({ cls: "pmb-list-meta" });
+		if (tags.length > 0) renderTags(metaEl, tags, config);
+		if (chips.length > 0) renderChips(metaEl, chips, ctx);
+	}
+
+	if (dateText) {
+		rowEl.createDiv({ cls: "pmb-list-date", text: dateText });
+	}
+
+	return { cardEl: rowEl, checkboxProperty };
+}
+
+/** The status ring both a card and a list row lead with, doubling as a checkbox when one backs it. */
+function renderStatus(
+	parentEl: HTMLElement,
+	cls: string,
+	checkbox: Value | null,
+	isOverdue: boolean,
+): void {
+	const statusEl = parentEl.createDiv({ cls });
+	statusEl.toggleClass("pmb-status-overdue", isOverdue);
+	if (checkbox) {
+		statusEl.addClass("pmb-status-checkbox");
+		// role="checkbox" collides with Obsidian's own native checkbox
+		// styling for that role, drawing a second ring over ours.
+		statusEl.setAttribute("role", "button");
+		statusEl.setAttribute("aria-pressed", String(checkbox.isTruthy()));
+		statusEl.toggleClass("pmb-status-checked", checkbox.isTruthy());
+	}
 }
 
 export function cardTitle(entry: BasesEntry, config: BoardConfig): string {

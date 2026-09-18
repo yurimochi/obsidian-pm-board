@@ -52,17 +52,6 @@ export function buildLanes(
 	}));
 }
 
-/** Every lane and column kept, but only the entries `matches` accepts. */
-export function filterLanes(lanes: Lane[], matches: (entry: BasesEntry) => boolean): Lane[] {
-	return lanes.map((lane) => ({
-		key: lane.key,
-		columns: lane.columns.map((column) => ({
-			key: column.key,
-			entries: column.entries.filter(matches),
-		})),
-	}));
-}
-
 /** The synthetic column every column keyed before today is merged into. */
 export const OVERDUE_COLUMN_KEY = "Overdue";
 
