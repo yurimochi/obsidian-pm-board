@@ -12,6 +12,14 @@ import { PriorityLabel, priorityOf } from "./priority";
 import { normaliseTagName } from "./tag-colors";
 
 const TAGS_PROPERTY = "file.tags";
+/**
+ * Every card in this vault carries this tag as boilerplate categorisation
+ * (it's what the board's own filters use to find task notes at all), so
+ * showing it as a chip on every single card adds noise, not information.
+ * Dropped from the card's own tag chips only; it still filters, and the
+ * edit-tags prompt still reads and writes it normally.
+ */
+const HIDDEN_TAG = "task";
 
 export interface RenderedCard {
 	cardEl: HTMLElement;
@@ -47,8 +55,13 @@ function collectCardParts(
 		if (propId === config.priorityProperty) continue;
 		const value = entry.getValue(propId);
 		if (!value) continue;
-		if (propId === TAGS_PROPERTY) tags.push(...valuesOf(value).map(normaliseTagName));
-		else if (!checkbox && value instanceof BooleanValue) {
+		if (propId === TAGS_PROPERTY) {
+			tags.push(
+				...valuesOf(value)
+					.map(normaliseTagName)
+					.filter((tag) => tag.toLowerCase() !== HIDDEN_TAG),
+			);
+		} else if (!checkbox && value instanceof BooleanValue) {
 			checkbox = value;
 			checkboxProperty = propId;
 		} else chips.push(value);
