@@ -501,6 +501,7 @@
 	   them on both sides. The filter row keeps its own inset since it isn't
 	   part of that horizontally-scrolling area. */
 	.pmb-board {
+		--pmb-radius-card: 20px;
 		padding: 16px 0;
 		overflow-y: hidden;
 	}
@@ -527,7 +528,7 @@
 	   to scroll into a centred position too, rather than stopping flush
 	   against the edge once there's no sibling left to make space for it. */
 	.pmb-lane-columns {
-		--pmb-column-peek: 94vw;
+		--pmb-column-peek: 90vw;
 		flex: 1;
 		min-height: 0;
 		overflow-x: auto;
