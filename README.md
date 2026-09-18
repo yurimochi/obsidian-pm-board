@@ -47,8 +47,7 @@ These are the things PM-Board sets out to do differently:
 - [x] A fixed light/dark visual palette, independent of the installed
       Obsidian theme, following Obsidian's own light/dark toggle
 - [x] Priority badges (P1-P4) on cards
-- [x] Projects: a property that groups cards under a project, filterable from
-      a searchable picker in the board's header
+- [x] Projects: a property that shows a card's project as a chip
 - [ ] Move board settings into the plugin's own settings tab, instead of
       hand-edited `.base` YAML
 - [ ] Experience polish:
@@ -89,9 +88,7 @@ query has, tags included; picking one adds the second, listing every
 distinct value that property holds across the board. Picking one of those
 hides every card that doesn't carry it, in every lane and column, leaving the
 rest of the board otherwise unchanged. Both buttons read "No filter" and
-"All values" to show everything again. The project picker (below) composes
-with this filter rather than replacing it: both narrow the same board
-together.
+"All values" to show everything again.
 
 Both the property and the chosen value are written to the board's own
 settings, the same as a collapsed column or a WIP limit, so the filter is
@@ -126,10 +123,9 @@ views:
 
 ### Projects
 
-Set `projectProperty` on the view to show a card's project (a folder icon
-plus its text value) and to add a searchable **project picker** to the
-board's header. Picking a project there narrows the board to that project's
-cards, composing with the property filter above rather than replacing it.
+Set `projectProperty` on the view to show a card's project as a folder icon
+plus its text value, above the title. Purely a label — filter to one project
+with the generic property filter above, using this same property.
 
 ```yaml
 views:
@@ -137,9 +133,6 @@ views:
     name: Delivery
     projectProperty: project
 ```
-
-This is a flat property: there is no parent/subproject hierarchy, and the
-picker lists every distinct value as one unstructured, searchable list.
 
 ## Keyboard
 
@@ -294,12 +287,14 @@ to a rendered, read-only preview with an **Open note** button instead.
 
 ## Known gaps
 
-- **The visual redesign, priority badges, and project picker are only
-  partly verified in a real vault.** A first pass in a live Base found a
-  couple of real bugs (priority values stored as a bare digit, filtering
-  switching to a since-reverted List view, a stray background behind a
-  date column's title), fixed here; the rest is still unconfirmed beyond
-  lint, the unit test suite, and a clean build.
+- **The visual redesign and priority/project badges are confirmed working
+  in a real vault** after a few rounds of fixes: priority accepting a bare
+  digit, the property filter narrowing instead of switching views, stray
+  backgrounds behind the date column's title and the +/⋯ buttons (a host
+  theme's own `button` styling winning over the fixed palette), and the
+  "task" tag (present on every card in this vault) hidden from card chips.
+  An earlier project picker in the header was removed after testing; use
+  the generic property filter to narrow by project instead.
 - **Overdue's Reschedule link has no action yet.** It's shown for visual
   parity with the design it's adapted from; clicking it does nothing.
 - **Keyboard support is unverified.** The navigation and move logic is covered

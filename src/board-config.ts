@@ -45,10 +45,8 @@ export interface BoardConfig {
 	listFilterProperty: BasesPropertyId | null;
 	/** The value being filtered to within listFilterProperty. */
 	listFilterValue: string | null;
-	/** Property holding a card's project, shown as a chip and filterable from the header. */
+	/** Property holding a card's project, shown as a chip on the card. */
 	projectProperty: BasesPropertyId | null;
-	/** The project being filtered to, from the header's project picker. */
-	projectFilterValue: string | null;
 	/** Property holding a card's priority; expected to hold P1-P4. */
 	priorityProperty: BasesPropertyId | null;
 }
@@ -81,14 +79,8 @@ export function readBoardConfig(config: BasesViewConfig): BoardConfig {
 		listFilterProperty: config.getAsPropertyId("listFilterProperty"),
 		listFilterValue: readString(config, "listFilterValue"),
 		projectProperty: config.getAsPropertyId("projectProperty"),
-		projectFilterValue: readString(config, "projectFilterValue"),
 		priorityProperty: config.getAsPropertyId("priorityProperty"),
 	};
-}
-
-/** Sets which project the header's project picker filters the board to. */
-export function setProjectFilter(config: BasesViewConfig, project: string | null): void {
-	config.set("projectFilterValue", project);
 }
 
 /**

@@ -11,7 +11,6 @@ import {
 	setColumnMapValue,
 	setColumnOrder,
 	setListFilter,
-	setProjectFilter,
 } from "../src/board-config";
 
 /** Minimal stand-in for BasesViewConfig backed by a plain object. */
@@ -130,12 +129,10 @@ describe("readBoardConfig", () => {
 		const config = readBoardConfig(
 			fakeConfig({
 				projectProperty: "note.project",
-				projectFilterValue: "accreditation",
 				priorityProperty: "note.priority",
 			}),
 		);
 		expect(config.projectProperty).toBe("note.project");
-		expect(config.projectFilterValue).toBe("accreditation");
 		expect(config.priorityProperty).toBe("note.priority");
 	});
 
@@ -169,20 +166,6 @@ describe("setListFilter", () => {
 		setListFilter(fakeConfig(raw), "note.priority", null);
 		expect(raw.listFilterProperty).toBe("note.priority");
 		expect(raw.listFilterValue).toBeNull();
-	});
-});
-
-describe("setProjectFilter", () => {
-	it("writes the project", () => {
-		const raw: Record<string, unknown> = {};
-		setProjectFilter(fakeConfig(raw), "accreditation");
-		expect(raw.projectFilterValue).toBe("accreditation");
-	});
-
-	it("clears it back to null", () => {
-		const raw: Record<string, unknown> = { projectFilterValue: "accreditation" };
-		setProjectFilter(fakeConfig(raw), null);
-		expect(raw.projectFilterValue).toBeNull();
 	});
 });
 

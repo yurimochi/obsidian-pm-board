@@ -79,21 +79,6 @@
 	border-color: var(--pmb-border-hover);
 }
 
-/* The project picker reads as plain text + chevron, no box — the !important
-   overrides a host theme's own `button` background/border, same issue as
-   the column toggle and +/⋯ buttons. */
-.pmb-filter-button-plain {
-	padding-left: 4px;
-	padding-right: 4px;
-	background-color: transparent !important;
-	border-color: transparent !important;
-}
-
-.pmb-filter-button-plain:hover {
-	background-color: var(--pmb-surface-2) !important;
-	border-color: transparent !important;
-}
-
 .pmb-filter-chevron {
 	display: flex;
 	color: var(--pmb-text-muted-1);
@@ -671,32 +656,4 @@
 	justify-content: flex-end;
 	gap: var(--size-4-2);
 	margin-top: var(--size-4-3);
-}
-
-.pmb-project-picker-list {
-	display: flex;
-	flex-direction: column;
-	max-height: 300px;
-	overflow-y: auto;
-	margin-top: var(--size-4-3);
-}
-
-.pmb-project-picker-item {
-	padding: var(--size-4-2) var(--size-4-3);
-	border-radius: var(--radius-s);
-	cursor: pointer;
-}
-
-.pmb-project-picker-item:hover {
-	background-color: var(--background-modifier-hover);
-}
-
-.pmb-project-picker-item-active {
-	color: var(--text-accent);
-	font-weight: var(--font-medium);
-}
-
-.pmb-project-picker-empty {
-	padding: var(--size-4-2) var(--size-4-3);
-	color: var(--text-muted);
 }
