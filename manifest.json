@@ -1,7 +1,7 @@
 {
 	"id": "pm-board",
 	"name": "PM-Board",
-	"version": "0.6.2",
+	"version": "0.6.3",
 	"minAppVersion": "1.10.2",
 	"description": "Board views for Bases: group notes into columns, split them across swimlanes, and drag cards to update their properties.",
 	"author": "Yurimochi",
