@@ -39,9 +39,9 @@ These are the things PM-Board sets out to do differently:
 - [x] Mobile layout
 - [x] Column header: add, rename, recolor, WIP limit, delete, drag to reorder
 - [x] Touch dragging on mobile: a still hold opens the card menu, a moving one drags the card
-- [x] Filter the board to one value of a list property (tags included): the
-      property from the view's own settings, the value from a button in the
-      board's own header
+- [x] Filter the board to one value of a property (tags included): two
+      buttons in the board's own header, one to pick the property, one for
+      the value
 - [ ] Projects: a way to group cards by a property, above individual boards
 - [ ] Move board settings into the plugin's own settings tab, instead of
       hand-edited `.base` YAML
@@ -78,18 +78,12 @@ rather than to the column as a whole.
 
 ## Filtering
 
-**Filter by list property**, next to Card Detail in the view's own settings,
-names a property (`tags` included) to filter the board on. Once set, a button
-appears in the board's own header listing every distinct value that property
-holds across the board; choosing one hides every card that doesn't carry it,
-in every lane and column, leaving the rest of the board otherwise unchanged.
-The button reads "All values" to show everything again.
-
-The property lives in the view's settings because Bases can offer a plain
-property picker there; the value can't, since listing a property's own values
-needs the query's actual entries, which only reach the board itself — so that
-part is a button in the board's own header instead, the same Menu control
-used everywhere else on the board.
+Two buttons in the board's own header. The first lists every property the
+query has, tags included; picking one adds the second, listing every
+distinct value that property holds across the board. Picking one of those
+hides every card that doesn't carry it, in every lane and column, leaving the
+rest of the board otherwise unchanged. Both buttons read "No filter" and
+"All values" to show everything again.
 
 Both the property and the chosen value are written to the board's own
 settings, the same as a collapsed column or a WIP limit, so the filter is
@@ -246,14 +240,17 @@ to a rendered, read-only preview with an **Open note** button instead.
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through
   `boardColumns`.
-- **Filtering by a list property is unverified in a vault.** Which cards a
-  chosen value hides is covered by tests through `filterLanes`, but the
-  property setting and the value button itself — appearing, listing the
-  right values, writing the choice back, restoring it on reopen — have not
-  been exercised outside those tests. An earlier attempt at this put both
-  the property and the value in the board's own header; the property picker
-  never rendered there for reasons that resisted diagnosis even with console
-  logging, which is why it now goes through the view's own settings instead.
+- **Filtering is unverified in a vault.** Which cards a chosen value hides is
+  covered by tests through `filterLanes`, but the two buttons themselves —
+  appearing, listing the right properties and values, writing the choice
+  back, restoring it on reopen — have not been exercised outside those
+  tests. An earlier version of the property button, backed by a bare
+  `<select>`, never rendered on a real vault for reasons that resisted
+  diagnosis even with console logging and a visible Notice; a later attempt
+  moved the property choice into the view's own settings instead, which
+  wasn't the flow wanted, so both buttons are back in the board's own
+  header, now built the same way the value button always was (a Menu, not
+  a `<select>`) — unconfirmed whether that was ever the actual problem.
 - **Sort by taking over card order is unverified in a vault.** The wiring
   is small (`getSort().length > 0` gates a couple of code paths), but
   `getSort()`'s exact behavior — whether it reflects a change immediately,

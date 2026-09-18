@@ -165,11 +165,14 @@ export class BoardView extends BasesView {
 			laneProperty ? (entry) => textValueOf(entry, laneProperty) : null,
 		);
 
-		// The property comes from the view's own settings (Filter by list
-		// property, next to Card Detail); its values come from every entry the
-		// query returned, not the (possibly already filtered) lanes, so
-		// narrowing the filter never shrinks what it can be widened back to.
+		// Both the property and its values come from every entry the query
+		// returned, not the (possibly already filtered) lanes, so narrowing the
+		// filter never shrinks what it can be widened back to. Candidates are
+		// every property the dataset has, not just the ones toggled visible on
+		// the board: a property can hold values worth filtering by without
+		// being one of the chips shown on a card.
 		const allEntries = this.data.data;
+		const filterProperties = [...new Set([...properties, ...this.allProperties])];
 		if (config.listFilterProperty && config.listFilterValue) {
 			const property = config.listFilterProperty;
 			const value = config.listFilterValue;
@@ -179,8 +182,8 @@ export class BoardView extends BasesView {
 		this.lanes = lanes;
 		this.boardEl.empty();
 		this.boardEl.toggleClass("pmb-board-laned", lanes.length > 1 || laneProperty !== null);
-		if (config.listFilterProperty) {
-			this.renderListFilter(this.boardEl, config, config.listFilterProperty, allEntries);
+		if (filterProperties.length > 0) {
+			this.renderListFilter(this.boardEl, config, filterProperties, allEntries);
 		}
 		lanes.forEach((lane, laneIndex) => {
 			this.renderLane(this.boardEl as HTMLElement, lane, config, properties, laneIndex);
@@ -190,23 +193,56 @@ export class BoardView extends BasesView {
 	}
 
 	/**
-	 * The board's own header: once "Filter by list property" names a property
-	 * (set next to Card Detail, in the view's own settings — Bases has no way
-	 * to offer a dropdown of that property's own values there, since building
-	 * one needs the query's actual entries, not just the config), a button
-	 * here lists its distinct values to narrow the board to one. A Menu, the
-	 * same control every other part of the board already uses.
+	 * The board's own header: box 1 picks a property, box 2 (once box 1 names
+	 * one) lists its distinct values, and picking one of those filters the
+	 * board to it. Both are buttons that open a Menu, the same control every
+	 * other part of the board already uses, rather than a bare `<select>`.
 	 */
 	private renderListFilter(
 		parentEl: HTMLElement,
 		config: BoardConfig,
-		property: BasesPropertyId,
+		properties: BasesPropertyId[],
 		entries: BasesEntry[],
 	): void {
+		const filterEl = parentEl.createDiv({ cls: "pmb-filter" });
+
+		const propertyBtn = this.filterButton(
+			filterEl,
+			config.listFilterProperty
+				? this.config.getDisplayName(config.listFilterProperty)
+				: "Filter",
+		);
+		this.registerDomEvent(propertyBtn, "click", (event) => {
+			const menu = new Menu();
+			menu.addItem((item) =>
+				item
+					.setTitle("No filter")
+					.setChecked(config.listFilterProperty === null)
+					.onClick(() => {
+						setListFilter(this.config, null, null);
+						if (!this.notifyConfigChanged()) this.onDataUpdated();
+					}),
+			);
+			menu.addSeparator();
+			for (const property of properties) {
+				menu.addItem((item) =>
+					item
+						.setTitle(this.config.getDisplayName(property))
+						.setChecked(property === config.listFilterProperty)
+						.onClick(() => {
+							setListFilter(this.config, property, null);
+							if (!this.notifyConfigChanged()) this.onDataUpdated();
+						}),
+				);
+			}
+			menu.showAtMouseEvent(event);
+		});
+
+		if (!config.listFilterProperty) return;
+		const property = config.listFilterProperty;
 		const values = distinctListValues(entries, property);
 		if (values.length === 0) return;
 
-		const filterEl = parentEl.createDiv({ cls: "pmb-filter" });
 		const valueBtn = this.filterButton(filterEl, config.listFilterValue ?? "All values");
 		this.registerDomEvent(valueBtn, "click", (event) => {
 			const menu = new Menu();

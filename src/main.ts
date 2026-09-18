@@ -21,12 +21,6 @@ export default class PmBoardPlugin extends Plugin {
 						tab: "New tab",
 					},
 				},
-				{
-					key: "listFilterProperty",
-					type: "property",
-					displayName: "Filter by list property",
-					placeholder: "None",
-				},
 			],
 		});
 
