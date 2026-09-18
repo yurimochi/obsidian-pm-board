@@ -7,9 +7,9 @@ kanban-style board whose columns come from the Base's own `groupBy`
 configuration. Cards are your notes; moving a card writes the change straight
 back to the note's frontmatter.
 
-> **Status: early development (0.6.5).** Everything on the roadmap below is
-> built, and most of it confirmed working in a running vault. See
-> **Known gaps** for what hasn't been yet.
+> **Status: early development (0.6.5).** Everything is built except what's
+> still listed on the roadmap below, and most of it confirmed working in a
+> running vault. See **Known gaps** for what hasn't been yet.
 
 ## Design goals
 
@@ -27,30 +27,6 @@ These are the things PM-Board sets out to do differently:
 
 ## Roadmap
 
-- [x] Board view registered against the Bases API; columns from `groupedData`
-- [x] Drag and drop between columns, writing to frontmatter
-- [x] Manual card ordering
-- [x] Card property chips and tags
-- [x] Card cover images
-- [x] Adding cards from a column
-- [x] Swimlanes (two-axis grouping)
-- [x] Keyboard-driven card moves and ARIA semantics
-- [x] Moving cards without a pointer or a drag
-- [x] Mobile layout
-- [x] Column header: add, rename, recolor, WIP limit, delete, drag to reorder
-- [x] Touch-friendly mobile gestures: a held-then-released touch opens the
-      card menu (**Move to column**/**Move to lane** move it from there); a
-      touch that moves right away is left to the browser as an ordinary
-      scroll or swipe — no touch drag
-- [x] Filter the board to one value of a property (tags included): two
-      buttons in the board's own header, one to pick the property, one for
-      the value
-- [x] Overdue: on a date-grouped board, yesterday and earlier collapse into
-      one leading column instead of growing a new one every day
-- [x] A fixed light/dark visual palette, independent of the installed
-      Obsidian theme, following Obsidian's own light/dark toggle
-- [x] Priority badges (P1-P4) on cards
-- [x] Projects: a property that shows a card's project as a chip
 - [ ] Move board settings into the plugin's own settings tab, instead of
       hand-edited `.base` YAML
 - [ ] Experience polish:
