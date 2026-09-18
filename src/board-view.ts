@@ -169,15 +169,20 @@ export class BoardView extends BasesView {
 		// The candidate properties and their values both come from every entry
 		// the query returned, not the (possibly already filtered) lanes, so
 		// narrowing the filter never shrinks what it can be widened back to.
+		// Candidates come from every property the dataset has, not just the
+		// ones toggled visible on the board: a property can hold a real list
+		// worth filtering by without being one of the chips shown on a card.
 		const allEntries = this.data.data;
-		const filterableProperties = listProperties(properties, allEntries);
+		const candidateProperties = [...new Set([...properties, ...this.allProperties])];
+		const filterableProperties = listProperties(candidateProperties, allEntries);
 		// TEMPORARY: diagnosing why no property is being detected as a list on
 		// a real vault where one clearly should be. Safe to remove once fixed.
 		console.debug("PM-Board list filter diagnostics", {
-			properties,
+			visibleProperties: properties,
+			allProperties: this.allProperties,
 			entryCount: allEntries.length,
 			filterableProperties,
-			sample: properties.map((property) => {
+			sample: candidateProperties.map((property) => {
 				const first = allEntries.find((entry) => entry.getValue(property));
 				const value = first?.getValue(property);
 				return {
@@ -211,7 +216,8 @@ export class BoardView extends BasesView {
 	 * The board's own header: pick a list-valued property, then one of its
 	 * values, to show only the cards carrying it. Both come from every entry
 	 * the query returned, so the choices on offer don't shrink once a filter
-	 * is already narrowing what's on screen.
+	 * is already narrowing what's on screen. Buttons that open a Menu, the
+	 * same as every other control on the board, rather than a bare `<select>`.
 	 */
 	private renderListFilter(
 		parentEl: HTMLElement,
@@ -221,35 +227,74 @@ export class BoardView extends BasesView {
 	): void {
 		const filterEl = parentEl.createDiv({ cls: "pmb-filter" });
 
-		const propertySelect = filterEl.createEl("select", { cls: "pmb-filter-property" });
-		propertySelect.setAttribute("aria-label", "Filter by property");
-		propertySelect.createEl("option", { text: "No filter", value: "" });
-		for (const property of properties) {
-			propertySelect.createEl("option", {
-				text: this.config.getDisplayName(property),
-				value: property,
-			});
-		}
-		propertySelect.value = config.listFilterProperty ?? "";
-		this.registerDomEvent(propertySelect, "change", () => {
-			const next = propertySelect.value ? (propertySelect.value as BasesPropertyId) : null;
-			setListFilter(this.config, next, null);
-			if (!this.notifyConfigChanged()) this.onDataUpdated();
+		const propertyBtn = this.filterButton(
+			filterEl,
+			config.listFilterProperty
+				? this.config.getDisplayName(config.listFilterProperty)
+				: "Filter",
+		);
+		this.registerDomEvent(propertyBtn, "click", (event) => {
+			const menu = new Menu();
+			menu.addItem((item) =>
+				item
+					.setTitle("No filter")
+					.setChecked(config.listFilterProperty === null)
+					.onClick(() => {
+						setListFilter(this.config, null, null);
+						if (!this.notifyConfigChanged()) this.onDataUpdated();
+					}),
+			);
+			menu.addSeparator();
+			for (const property of properties) {
+				menu.addItem((item) =>
+					item
+						.setTitle(this.config.getDisplayName(property))
+						.setChecked(property === config.listFilterProperty)
+						.onClick(() => {
+							setListFilter(this.config, property, null);
+							if (!this.notifyConfigChanged()) this.onDataUpdated();
+						}),
+				);
+			}
+			menu.showAtMouseEvent(event);
 		});
 
 		if (!config.listFilterProperty) return;
+		const property = config.listFilterProperty;
 
-		const valueSelect = filterEl.createEl("select", { cls: "pmb-filter-value" });
-		valueSelect.setAttribute("aria-label", "Filter by value");
-		valueSelect.createEl("option", { text: "All", value: "" });
-		for (const value of distinctListValues(entries, config.listFilterProperty)) {
-			valueSelect.createEl("option", { text: value, value });
-		}
-		valueSelect.value = config.listFilterValue ?? "";
-		this.registerDomEvent(valueSelect, "change", () => {
-			setListFilter(this.config, config.listFilterProperty, valueSelect.value || null);
-			if (!this.notifyConfigChanged()) this.onDataUpdated();
+		const valueBtn = this.filterButton(filterEl, config.listFilterValue ?? "All values");
+		this.registerDomEvent(valueBtn, "click", (event) => {
+			const menu = new Menu();
+			menu.addItem((item) =>
+				item
+					.setTitle("All values")
+					.setChecked(config.listFilterValue === null)
+					.onClick(() => {
+						setListFilter(this.config, property, null);
+						if (!this.notifyConfigChanged()) this.onDataUpdated();
+					}),
+			);
+			menu.addSeparator();
+			for (const value of distinctListValues(entries, property)) {
+				menu.addItem((item) =>
+					item
+						.setTitle(value)
+						.setChecked(value === config.listFilterValue)
+						.onClick(() => {
+							setListFilter(this.config, property, value);
+							if (!this.notifyConfigChanged()) this.onDataUpdated();
+						}),
+				);
+			}
+			menu.showAtMouseEvent(event);
 		});
+	}
+
+	private filterButton(parentEl: HTMLElement, label: string): HTMLButtonElement {
+		const btn = parentEl.createEl("button", { cls: "pmb-filter-button" });
+		btn.createSpan({ text: label });
+		setIcon(btn.createSpan({ cls: "pmb-filter-chevron" }), "lucide-chevron-down");
+		return btn;
 	}
 
 	/**
