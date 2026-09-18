@@ -7,6 +7,13 @@
 	padding: var(--size-4-3);
 }
 
+.pmb-filter {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: var(--size-4-2);
+}
+
 .pmb-lane {
 	display: flex;
 	flex-direction: column;

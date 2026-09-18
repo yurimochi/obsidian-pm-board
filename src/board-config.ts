@@ -41,6 +41,10 @@ export interface BoardConfig {
 	swimlaneProperty: BasesPropertyId | null;
 	/** Property holding the manual drag order. */
 	orderProperty: string;
+	/** List-valued property the board filters cards to one value of; null shows everything. */
+	listFilterProperty: BasesPropertyId | null;
+	/** The value being filtered to within listFilterProperty. */
+	listFilterValue: string | null;
 }
 
 export const DEFAULT_ORDER_PROPERTY = "card_order";
@@ -68,7 +72,23 @@ export function readBoardConfig(config: BasesViewConfig): BoardConfig {
 		coverProperty: config.getAsPropertyId("coverProperty"),
 		swimlaneProperty: config.getAsPropertyId("swimlaneProperty"),
 		orderProperty: readString(config, "orderProperty") ?? DEFAULT_ORDER_PROPERTY,
+		listFilterProperty: config.getAsPropertyId("listFilterProperty"),
+		listFilterValue: readString(config, "listFilterValue"),
 	};
+}
+
+/**
+ * Sets which list property and value the board filters cards to. Changing the
+ * property clears the value with it, since a value from the old property has
+ * nothing to mean against the new one.
+ */
+export function setListFilter(
+	config: BasesViewConfig,
+	property: BasesPropertyId | null,
+	value: string | null,
+): void {
+	config.set("listFilterProperty", property);
+	config.set("listFilterValue", property ? value : null);
 }
 
 /**

@@ -10,6 +10,7 @@ import {
 	renameColumnKey,
 	setColumnMapValue,
 	setColumnOrder,
+	setListFilter,
 } from "../src/board-config";
 
 /** Minimal stand-in for BasesViewConfig backed by a plain object. */
@@ -114,6 +115,46 @@ describe("readBoardConfig", () => {
 			fakeConfig({ collapsedColumns: { a: true, b: false, c: "true" } }),
 		);
 		expect([...config.collapsedColumns]).toEqual(["a"]);
+	});
+
+	it("reads the list filter property and value", () => {
+		const config = readBoardConfig(
+			fakeConfig({ listFilterProperty: "note.tags", listFilterValue: "urgent" }),
+		);
+		expect(config.listFilterProperty).toBe("note.tags");
+		expect(config.listFilterValue).toBe("urgent");
+	});
+
+	it("has no list filter by default", () => {
+		const config = readBoardConfig(fakeConfig({}));
+		expect(config.listFilterProperty).toBeNull();
+		expect(config.listFilterValue).toBeNull();
+	});
+});
+
+describe("setListFilter", () => {
+	it("writes the property and value together", () => {
+		const raw: Record<string, unknown> = {};
+		setListFilter(fakeConfig(raw), "note.tags", "urgent");
+		expect(raw.listFilterProperty).toBe("note.tags");
+		expect(raw.listFilterValue).toBe("urgent");
+	});
+
+	it("clears the value along with the property", () => {
+		const raw: Record<string, unknown> = {
+			listFilterProperty: "note.tags",
+			listFilterValue: "urgent",
+		};
+		setListFilter(fakeConfig(raw), null, null);
+		expect(raw.listFilterProperty).toBeNull();
+		expect(raw.listFilterValue).toBeNull();
+	});
+
+	it("drops a stale value when only the property changes", () => {
+		const raw: Record<string, unknown> = {};
+		setListFilter(fakeConfig(raw), "note.priority", null);
+		expect(raw.listFilterProperty).toBe("note.priority");
+		expect(raw.listFilterValue).toBeNull();
 	});
 });
 

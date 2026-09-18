@@ -4,6 +4,7 @@ import {
 	BasesView,
 	DateValue,
 	Keymap,
+	ListValue,
 	Menu,
 	moment,
 	normalizePath,
@@ -27,8 +28,9 @@ import {
 	renameColumnKey,
 	setColumnMapValue,
 	setColumnOrder,
+	setListFilter,
 } from "./board-config";
-import { cardTitle, renderCard } from "./card";
+import { cardTitle, renderCard, valuesOf } from "./card";
 import { CardDetailModal } from "./card-detail-modal";
 import { groupKeyOf, sortGroups } from "./column-order";
 import { ConfirmModal } from "./confirm-modal";
@@ -56,7 +58,7 @@ import {
 } from "./order";
 import { PromptModal } from "./prompt-modal";
 import { addDays, isoDate, nextWeekStart } from "./schedule";
-import { buildLanes, Lane, LaneColumn } from "./swimlanes";
+import { buildLanes, filterLanes, Lane, LaneColumn } from "./swimlanes";
 import { applyPlaceholders, joinPath, uniqueName } from "./template";
 import { parseTagList } from "./tag-colors";
 
@@ -158,20 +160,79 @@ export class BoardView extends BasesView {
 		// the two silently fighting over the same axis.
 		this.sortActive = this.config.getSort().length > 0;
 
-		const lanes = buildLanes(
+		let lanes = buildLanes(
 			groups,
 			groupKeyOf,
 			laneProperty ? (entry) => textValueOf(entry, laneProperty) : null,
 		);
 
+		// The candidate properties and their values both come from every entry
+		// the query returned, not the (possibly already filtered) lanes, so
+		// narrowing the filter never shrinks what it can be widened back to.
+		const allEntries = this.data.data;
+		const filterableProperties = listProperties(properties, allEntries);
+		if (config.listFilterProperty && config.listFilterValue) {
+			const property = config.listFilterProperty;
+			const value = config.listFilterValue;
+			lanes = filterLanes(lanes, (entry) => matchesListFilter(entry, property, value));
+		}
+
 		this.lanes = lanes;
 		this.boardEl.empty();
 		this.boardEl.toggleClass("pmb-board-laned", lanes.length > 1 || laneProperty !== null);
+		if (filterableProperties.length > 0) {
+			this.renderListFilter(this.boardEl, config, filterableProperties, allEntries);
+		}
 		lanes.forEach((lane, laneIndex) => {
 			this.renderLane(this.boardEl as HTMLElement, lane, config, properties, laneIndex);
 		});
 		this.updateTabStops();
 		this.restoreFocus();
+	}
+
+	/**
+	 * The board's own header: pick a list-valued property, then one of its
+	 * values, to show only the cards carrying it. Both come from every entry
+	 * the query returned, so the choices on offer don't shrink once a filter
+	 * is already narrowing what's on screen.
+	 */
+	private renderListFilter(
+		parentEl: HTMLElement,
+		config: BoardConfig,
+		properties: BasesPropertyId[],
+		entries: BasesEntry[],
+	): void {
+		const filterEl = parentEl.createDiv({ cls: "pmb-filter" });
+
+		const propertySelect = filterEl.createEl("select", { cls: "pmb-filter-property" });
+		propertySelect.setAttribute("aria-label", "Filter by property");
+		propertySelect.createEl("option", { text: "No filter", value: "" });
+		for (const property of properties) {
+			propertySelect.createEl("option", {
+				text: this.config.getDisplayName(property),
+				value: property,
+			});
+		}
+		propertySelect.value = config.listFilterProperty ?? "";
+		this.registerDomEvent(propertySelect, "change", () => {
+			const next = propertySelect.value ? (propertySelect.value as BasesPropertyId) : null;
+			setListFilter(this.config, next, null);
+			if (!this.notifyConfigChanged()) this.onDataUpdated();
+		});
+
+		if (!config.listFilterProperty) return;
+
+		const valueSelect = filterEl.createEl("select", { cls: "pmb-filter-value" });
+		valueSelect.setAttribute("aria-label", "Filter by value");
+		valueSelect.createEl("option", { text: "All", value: "" });
+		for (const value of distinctListValues(entries, config.listFilterProperty)) {
+			valueSelect.createEl("option", { text: value, value });
+		}
+		valueSelect.value = config.listFilterValue ?? "";
+		this.registerDomEvent(valueSelect, "change", () => {
+			setListFilter(this.config, config.listFilterProperty, valueSelect.value || null);
+			if (!this.notifyConfigChanged()) this.onDataUpdated();
+		});
 	}
 
 	/**
@@ -1539,6 +1600,30 @@ function assign(frontmatter: Record<string, unknown>, key: string, value: unknow
 function textValueOf(entry: BasesEntry, property: BasesPropertyId): string | null {
 	const text = entry.getValue(property)?.toString().trim();
 	return text ? text : null;
+}
+
+/** Properties, among the given ones, that hold a list value on at least one entry. */
+function listProperties(properties: BasesPropertyId[], entries: BasesEntry[]): BasesPropertyId[] {
+	return properties.filter((property) =>
+		entries.some((entry) => entry.getValue(property) instanceof ListValue),
+	);
+}
+
+/** Every distinct value of a list property across entries, sorted for a stable menu. */
+function distinctListValues(entries: BasesEntry[], property: BasesPropertyId): string[] {
+	const values = new Set<string>();
+	for (const entry of entries) {
+		const value = entry.getValue(property);
+		if (!value) continue;
+		for (const item of valuesOf(value)) values.add(item);
+	}
+	return [...values].sort((a, b) => a.localeCompare(b));
+}
+
+/** Whether an entry's list property carries the value the board is filtered to. */
+function matchesListFilter(entry: BasesEntry, property: BasesPropertyId, value: string): boolean {
+	const propValue = entry.getValue(property);
+	return propValue ? valuesOf(propValue).includes(value) : false;
 }
 
 function cardBounds(cardsEl: HTMLElement): { top: number; height: number }[] {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BasesEntry, BasesEntryGroup } from "obsidian";
-import { buildLanes } from "../src/swimlanes";
+import { buildLanes, filterLanes, Lane } from "../src/swimlanes";
 
 /** An entry identified by name, carrying the value the lane axis groups on. */
 function entry(name: string, lane: string | null): BasesEntry {
@@ -99,5 +99,47 @@ describe("buildLanes", () => {
 			.sort();
 
 		expect(placed).toEqual(["a", "b", "c", "d"]);
+	});
+});
+
+describe("filterLanes", () => {
+	function lanes(): Lane[] {
+		return [
+			{
+				key: "team-1",
+				columns: [
+					{ key: "Todo", entries: [entry("a", "team-1"), entry("b", "team-1")] },
+					{ key: "Done", entries: [] },
+				],
+			},
+			{
+				key: "team-2",
+				columns: [
+					{ key: "Todo", entries: [entry("c", "team-2")] },
+					{ key: "Done", entries: [] },
+				],
+			},
+		];
+	}
+
+	it("keeps only the entries the predicate accepts", () => {
+		const kept = new Set(["a", "c"]);
+		const filtered = filterLanes(lanes(), (e) => kept.has((e as unknown as { name: string }).name));
+
+		expect(filtered[0].columns.map((c) => names(c.entries))).toEqual([["a"], []]);
+		expect(filtered[1].columns.map((c) => names(c.entries))).toEqual([["c"], []]);
+	});
+
+	it("keeps every lane and column even when everything is filtered out", () => {
+		const filtered = filterLanes(lanes(), () => false);
+
+		expect(filtered.map((l) => l.key)).toEqual(["team-1", "team-2"]);
+		expect(filtered.every((l) => l.columns.every((c) => c.entries.length === 0))).toBe(true);
+	});
+
+	it("does not mutate the input", () => {
+		const original = lanes();
+		filterLanes(original, () => false);
+		expect(original[0].columns[0].entries).toHaveLength(2);
 	});
 });

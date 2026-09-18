@@ -102,7 +102,7 @@ function renderChips(parentEl: HTMLElement, values: Value[], ctx: RenderContext)
 }
 
 /** Flattens a list value into its elements; other values yield themselves. */
-function valuesOf(value: Value): string[] {
+export function valuesOf(value: Value): string[] {
 	if (!(value instanceof ListValue)) {
 		const text = value.toString().trim();
 		return text ? [text] : [];
