@@ -182,6 +182,9 @@ A column's header carries more than its name and count:
 - **The grip handle** drags the column to reorder it, when the board groups
   by anything other than a date. A date's own order already comes from the
   date; there is nothing to drag it into.
+- **Clicking the header** collapses or expands a column, except on a
+  date-grouped board: every column, Overdue included, stays expanded there,
+  since collapsing one just hides cards from landing or leaving on their own.
 - **+** adds a card straight to that column, collapsed or not. Hidden on
   Overdue, which has no date of its own for a new card to take.
 - **⋯** opens a menu:
@@ -247,7 +250,9 @@ to a rendered, read-only preview with an **Open note** button instead.
   by tests through `mergeOverdueColumns`, but the column itself — appearing
   only on a date-grouped board, showing the right cards, the per-card date it
   shows instead of a column name, and blocking cards from being moved or
-  added to it directly — has not been exercised outside those tests.
+  added to it directly — has not been exercised outside those tests. Neither
+  has turning collapsing off entirely on a date-grouped board (every column
+  is meant to render expanded, with no chevron or click to collapse one).
 - **Keyboard support is unverified.** The navigation and move logic is covered
   by tests, but the wiring between a keypress and the board has not been
   exercised in a running vault. Treat it as unfinished.

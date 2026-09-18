@@ -358,7 +358,10 @@ export class BoardView extends BasesView {
 		at: { lane: number; column: number },
 	): void {
 		const key = column.key;
-		const collapsed = config.collapsedColumns.has(collapseKey(key));
+		// A date column's place already comes from the date, and Overdue is
+		// recomputed on every redraw; collapsing either just hides cards a
+		// user still needs to see land or leave on their own.
+		const collapsed = !this.dateGrouped && config.collapsedColumns.has(collapseKey(key));
 		const limit = lookupColumn(config.wipLimits, key);
 		const color = lookupColumn(config.columnColors, key);
 
@@ -448,10 +451,15 @@ export class BoardView extends BasesView {
 
 		const toggleEl = headerEl.createEl("button", { cls: "pmb-column-toggle" });
 		toggleEl.setAttribute("aria-expanded", String(!collapsed));
-		setIcon(
-			toggleEl.createSpan({ cls: "pmb-column-chevron" }),
-			collapsed ? "lucide-chevron-right" : "lucide-chevron-down",
-		);
+		// Collapsing is off entirely for a date-grouped board (see the note on
+		// `collapsed` above), so there's no chevron promising it here either.
+		toggleEl.toggleClass("pmb-column-toggle-static", this.dateGrouped);
+		if (!this.dateGrouped) {
+			setIcon(
+				toggleEl.createSpan({ cls: "pmb-column-chevron" }),
+				collapsed ? "lucide-chevron-right" : "lucide-chevron-down",
+			);
+		}
 		toggleEl.createSpan({ cls: "pmb-column-title", text: key ?? NO_VALUE_COLLAPSE_KEY });
 		toggleEl.createSpan({
 			cls: "pmb-column-count",
@@ -460,7 +468,9 @@ export class BoardView extends BasesView {
 					? String(column.entries.length)
 					: `${column.entries.length}/${limit}`,
 		});
-		this.registerDomEvent(toggleEl, "click", () => this.toggleColumn(key, collapsed));
+		if (!this.dateGrouped) {
+			this.registerDomEvent(toggleEl, "click", () => this.toggleColumn(key, collapsed));
+		}
 
 		const actionsEl = headerEl.createDiv({ cls: "pmb-column-actions" });
 		// Overdue isn't a value a new card could carry, so there's nothing here
@@ -1643,7 +1653,9 @@ export class BoardView extends BasesView {
 		const config = readBoardConfig(this.config);
 		return this.lanes.map((lane) =>
 			lane.columns.map((column) =>
-				config.collapsedColumns.has(collapseKey(column.key)) ? 0 : column.entries.length,
+				!this.dateGrouped && config.collapsedColumns.has(collapseKey(column.key))
+					? 0
+					: column.entries.length,
 			),
 		);
 	}

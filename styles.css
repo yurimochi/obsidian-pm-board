@@ -164,6 +164,17 @@
 	background-color: var(--background-modifier-active-hover);
 }
 
+/* A date-grouped column can't collapse, so its toggle is a label, not a
+   button; this drops the pointer cursor and hover fill that would otherwise
+   promise a click does something. */
+.pmb-column-toggle-static {
+	cursor: default;
+}
+
+.pmb-column-toggle-static:hover {
+	background-color: transparent;
+}
+
 .pmb-column-chevron {
 	display: flex;
 	color: var(--text-muted);
