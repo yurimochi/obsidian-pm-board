@@ -79,6 +79,21 @@
 	border-color: var(--pmb-border-hover);
 }
 
+/* The project picker reads as plain text + chevron, no box — the !important
+   overrides a host theme's own `button` background/border, same issue as
+   the column toggle and +/⋯ buttons. */
+.pmb-filter-button-plain {
+	padding-left: 4px;
+	padding-right: 4px;
+	background-color: transparent !important;
+	border-color: transparent !important;
+}
+
+.pmb-filter-button-plain:hover {
+	background-color: var(--pmb-surface-2) !important;
+	border-color: transparent !important;
+}
+
 .pmb-filter-chevron {
 	display: flex;
 	color: var(--pmb-text-muted-1);

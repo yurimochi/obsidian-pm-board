@@ -315,7 +315,11 @@ export class BoardView extends BasesView {
 		projectProperty: BasesPropertyId,
 		entries: BasesEntry[],
 	): void {
-		const projectBtn = this.filterButton(parentEl, config.projectFilterValue ?? "All projects");
+		const projectBtn = this.filterButton(
+			parentEl,
+			config.projectFilterValue ?? "All projects",
+			true,
+		);
 		this.registerDomEvent(projectBtn, "click", () => {
 			this.report(
 				this.pickProject(config, projectProperty, entries),
@@ -336,8 +340,10 @@ export class BoardView extends BasesView {
 		if (!this.notifyConfigChanged()) this.onDataUpdated();
 	}
 
-	private filterButton(parentEl: HTMLElement, label: string): HTMLButtonElement {
+	/** `plain` drops the button's box (background/border), text and chevron only — used for the project picker. */
+	private filterButton(parentEl: HTMLElement, label: string, plain = false): HTMLButtonElement {
 		const btn = parentEl.createEl("button", { cls: "pmb-filter-button" });
+		btn.toggleClass("pmb-filter-button-plain", plain);
 		btn.createSpan({ text: label });
 		setIcon(btn.createSpan({ cls: "pmb-filter-chevron" }), "lucide-chevron-down");
 		return btn;
