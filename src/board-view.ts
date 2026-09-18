@@ -413,6 +413,7 @@ export class BoardView extends BasesView {
 				properties,
 				{ ...at, index },
 				dueDateProperty ? textValueOf(entry, dueDateProperty) : null,
+				isOverdue,
 			);
 		});
 		// Overdue is computed fresh on every render; a card dropped there would
@@ -475,9 +476,11 @@ export class BoardView extends BasesView {
 		}
 
 		const actionsEl = headerEl.createDiv({ cls: "pmb-column-actions" });
-		// Overdue isn't a value a new card could carry, so there's nothing here
-		// for adding a card to mean.
-		if (key !== OVERDUE_COLUMN_KEY) {
+		if (key === OVERDUE_COLUMN_KEY) {
+			// Not wired to anything yet: rescheduling a whole column of cards at
+			// once needs its own design, so this is a placeholder for now.
+			actionsEl.createSpan({ cls: "pmb-column-reschedule", text: "Reschedule" });
+		} else {
 			const addEl = actionsEl.createEl("button", { cls: "pmb-column-add" });
 			addEl.setAttribute("aria-label", "Add card");
 			setIcon(addEl, "lucide-plus");
@@ -524,6 +527,7 @@ export class BoardView extends BasesView {
 		properties: BasesPropertyId[],
 		at: BoardPosition,
 		dueDateText: string | null,
+		isOverdue: boolean,
 	): void {
 		const { cardEl, checkboxProperty } = renderCard(
 			cardsEl,
@@ -533,6 +537,7 @@ export class BoardView extends BasesView {
 			this.renderContext,
 			(target) => this.coverSrcOf(target, config),
 			dueDateText,
+			isOverdue,
 		);
 		cardEl.draggable = true;
 		cardEl.tabIndex = -1;

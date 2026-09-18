@@ -1,10 +1,55 @@
+/* Fixed light/dark palettes from the board's own design, not Obsidian's
+   theme variables: the board is meant to look the same regardless of which
+   Obsidian theme is installed, switching only with Obsidian's own light/dark
+   toggle (the .theme-light/.theme-dark class on <body>). */
 .pmb-board {
+	--pmb-bg: #f4f4f4;
+	--pmb-surface: #ffffff;
+	--pmb-surface-2: #f0f0f0;
+	--pmb-border: #e2e2e2;
+	--pmb-border-hover: #cfcfcf;
+	--pmb-text: #1a1a1a;
+	--pmb-text-muted-1: #6a6a6a;
+	--pmb-text-muted-2: #8a8a8a;
+	--pmb-text-muted-3: #8a8a8a;
+	--pmb-dropdown-bg: #ffffff;
+	--pmb-dropdown-border: oklch(0.88 0.005 260);
+	--pmb-dropdown-hover: oklch(0.92 0.005 260);
+	--pmb-accent: #e2735a;
+	--pmb-status-idle: #5a5a5a;
+	--pmb-priority-p1: #e2735a;
+	--pmb-priority-p2: #f97316;
+	--pmb-priority-p3: #eab308;
+	--pmb-priority-p4: #9a9a9a;
+	--pmb-priority-text: #1a1a1a;
+	--pmb-radius-card: 14px;
+	--pmb-radius-s: 6px;
+	--pmb-radius-m: 8px;
+
 	display: flex;
 	flex-direction: column;
-	gap: var(--size-4-4);
+	gap: 24px;
 	height: 100%;
 	overflow: auto;
-	padding: var(--size-4-3);
+	padding: 24px;
+	box-sizing: border-box;
+	background-color: var(--pmb-bg);
+	color: var(--pmb-text);
+}
+
+.theme-dark .pmb-board {
+	--pmb-bg: #181818;
+	--pmb-surface: #242424;
+	--pmb-surface-2: #2c2c2c;
+	--pmb-border: #333333;
+	--pmb-border-hover: #444444;
+	--pmb-text: #f2f2f2;
+	--pmb-text-muted-1: #9a9a9a;
+	--pmb-text-muted-2: #7a7a7a;
+	--pmb-text-muted-3: #6f6f6f;
+	--pmb-dropdown-bg: oklch(0.24 0.005 260);
+	--pmb-dropdown-border: oklch(0.32 0.005 260);
+	--pmb-dropdown-hover: oklch(0.3 0.005 260);
 }
 
 .pmb-filter {
@@ -12,31 +57,31 @@
 	flex-shrink: 0;
 	align-items: center;
 	justify-content: flex-end;
-	gap: var(--size-4-2);
+	gap: 12px;
 }
 
 .pmb-filter-button {
 	display: flex;
 	align-items: center;
-	gap: var(--size-2-2);
-	padding: var(--size-2-2) var(--size-4-2);
-	background-color: var(--background-secondary);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	color: var(--text-normal);
+	gap: 8px;
+	padding: 8px 16px;
+	background-color: var(--pmb-surface);
+	border: 1px solid var(--pmb-border);
+	border-radius: var(--pmb-radius-m);
+	color: var(--pmb-text);
 	font: inherit;
-	font-size: var(--font-ui-small);
+	font-size: 12px;
+	font-weight: 600;
 	cursor: pointer;
 }
 
 .pmb-filter-button:hover {
-	background-color: var(--background-modifier-hover);
-	border-color: var(--background-modifier-border-hover);
+	border-color: var(--pmb-border-hover);
 }
 
 .pmb-filter-chevron {
 	display: flex;
-	color: var(--text-muted);
+	color: var(--pmb-text-muted-1);
 }
 
 .pmb-lane {
@@ -47,7 +92,7 @@
 
 .pmb-lane-columns {
 	display: flex;
-	gap: var(--size-4-3);
+	gap: 32px;
 	align-items: flex-start;
 }
 
@@ -62,11 +107,11 @@
 .pmb-lane-title {
 	position: sticky;
 	left: 0;
-	margin-bottom: var(--size-4-2);
-	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
-	font-weight: var(--font-semibold);
-	letter-spacing: 0.04em;
+	margin-bottom: 8px;
+	color: var(--pmb-text-muted-2);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
 	text-transform: uppercase;
 }
 
@@ -79,10 +124,9 @@
 .pmb-column {
 	display: flex;
 	flex-direction: column;
-	flex: 0 0 var(--pmb-column-width, 320px);
+	gap: 16px;
+	flex: 0 0 var(--pmb-column-width, 250px);
 	max-height: 100%;
-	background-color: var(--background-secondary);
-	border-radius: var(--radius-m);
 }
 
 .pmb-column-collapsed {
@@ -96,7 +140,7 @@
 
 .pmb-column-collapsed .pmb-column-header {
 	height: 100%;
-	padding: var(--size-4-3) var(--size-2-3);
+	padding: 8px 4px;
 }
 
 .pmb-column-collapsed .pmb-column-toggle {
@@ -116,16 +160,13 @@
 .pmb-column-header {
 	display: flex;
 	align-items: center;
-	gap: var(--size-4-2);
-	padding: var(--size-4-3) var(--size-4-2) var(--size-4-3) var(--size-4-2);
-	font-weight: var(--font-semibold);
+	justify-content: space-between;
+	gap: 8px;
 	width: 100%;
-	color: var(--text-normal);
-	font-size: var(--font-ui-medium);
 }
 
 /* A colour set on the column travels here rather than the header's own
-   background, so it reads as an accent rather than fighting the theme. */
+   background, so it reads as an accent rather than fighting the palette. */
 .pmb-column-colored {
 	box-shadow: inset 0 3px 0 0 var(--pmb-column-color);
 }
@@ -133,7 +174,7 @@
 .pmb-column-drag-handle {
 	display: flex;
 	align-items: center;
-	color: var(--text-muted);
+	color: var(--pmb-text-muted-1);
 	cursor: grab;
 }
 
@@ -143,25 +184,24 @@
 
 .pmb-column-toggle {
 	display: flex;
-	align-items: center;
-	gap: var(--size-4-2);
-	flex: 1;
+	align-items: baseline;
+	gap: 6px;
 	min-width: 0;
-	padding: var(--size-2-2);
-	margin: calc(var(--size-2-2) * -1);
+	overflow: hidden;
+	padding: 2px;
+	margin: -2px;
 	background: none;
 	border: none;
 	box-shadow: none;
 	color: inherit;
 	font: inherit;
-	font-weight: inherit;
 	text-align: left;
 	cursor: pointer;
-	border-radius: var(--radius-s);
+	border-radius: var(--pmb-radius-s);
 }
 
 .pmb-column-toggle:hover {
-	background-color: var(--background-modifier-active-hover);
+	background-color: var(--pmb-surface-2);
 }
 
 /* A date-grouped column can't collapse, so its toggle is a label, not a
@@ -177,32 +217,43 @@
 
 .pmb-column-chevron {
 	display: flex;
-	color: var(--text-muted);
+	color: var(--pmb-text-muted-1);
 }
 
 .pmb-column-title {
-	flex: 1;
+	color: var(--pmb-text);
+	font-size: 12px;
+	font-weight: 700;
+	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 
 .pmb-column-count {
-	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
+	color: var(--pmb-text-muted-2);
+	font-size: 12px;
+	font-weight: 500;
 	font-variant-numeric: tabular-nums;
+	flex-shrink: 0;
 }
 
 .pmb-column-over-limit .pmb-column-count {
-	color: var(--text-error);
-	font-weight: var(--font-bold);
+	color: var(--pmb-accent);
+	font-weight: 700;
 }
 
 .pmb-column-actions {
 	display: flex;
 	align-items: center;
-	gap: var(--size-4-1);
+	gap: 4px;
 	flex: 0 0 auto;
+}
+
+.pmb-column-reschedule {
+	color: var(--pmb-accent);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
 }
 
 .pmb-column-add,
@@ -210,18 +261,18 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: var(--size-2-2);
+	padding: 4px;
 	background: none;
 	border: none;
 	box-shadow: none;
-	color: var(--text-muted);
+	color: var(--pmb-text-muted-1);
 	cursor: pointer;
-	border-radius: var(--radius-s);
+	border-radius: var(--pmb-radius-s);
 }
 
 .pmb-column-add:hover,
 .pmb-column-menu:hover {
-	background-color: var(--background-modifier-active-hover);
+	background-color: var(--pmb-surface-2);
 }
 
 /* A clicked button keeps browser focus afterward, which otherwise leaves a
@@ -236,33 +287,36 @@
 .pmb-column-toggle:focus-visible,
 .pmb-column-add:focus-visible,
 .pmb-column-menu:focus-visible {
-	outline: 2px solid var(--interactive-accent);
+	outline: 2px solid var(--pmb-accent);
 	outline-offset: -2px;
 }
 
 .pmb-lane-columns-drop-target {
-	background-color: var(--background-modifier-hover);
-	border-radius: var(--radius-m);
+	background-color: var(--pmb-surface-2);
+	border-radius: var(--pmb-radius-m);
 }
 
 .pmb-cards {
 	display: flex;
 	flex-direction: column;
-	gap: var(--size-4-2);
+	gap: 16px;
 	overflow-y: auto;
-	padding: 0 var(--size-4-2) var(--size-4-2);
+	padding: 0 0 4px;
 }
 
 .pmb-cards-drop-target {
-	background-color: var(--background-modifier-hover);
-	border-radius: var(--radius-s);
+	background-color: var(--pmb-surface-2);
+	border-radius: var(--pmb-radius-s);
 }
 
 .pmb-card {
-	background-color: var(--background-primary);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-l);
-	padding: var(--size-4-4);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	background-color: var(--pmb-surface);
+	border: 1px solid var(--pmb-border);
+	border-radius: var(--pmb-radius-card);
+	padding: 12px;
 	cursor: grab;
 }
 
@@ -281,18 +335,17 @@
 	left: 0;
 	z-index: 100;
 	pointer-events: none;
-	box-shadow: var(--shadow-l);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .pmb-card:hover {
-	border-color: var(--background-modifier-border-hover);
-	background-color: var(--background-primary-alt);
+	border-color: var(--pmb-border-hover);
 }
 
 /* Keyboard focus only: hovering must not look like the card is focused,
    since the arrow keys act on focus and not on the pointer. */
 .pmb-card:focus-visible {
-	outline: 2px solid var(--interactive-accent);
+	outline: 2px solid var(--pmb-accent);
 	outline-offset: 2px;
 }
 
@@ -314,45 +367,96 @@
 	width: 100%;
 	aspect-ratio: 16 / 9;
 	object-fit: cover;
-	border-radius: var(--radius-s);
-	margin-bottom: var(--size-4-3);
+	border-radius: var(--pmb-radius-s);
 }
 
-.pmb-card-header {
+/* Row 1: project chip (left) and priority badge (right); omitted entirely
+   when a card has neither. Indented to sit above the title, past the
+   status ring row 2 starts with. */
+.pmb-card-top {
 	display: flex;
 	align-items: center;
-	gap: var(--size-4-2);
+	justify-content: space-between;
+	gap: 4px;
+	padding-left: 24px;
+	color: var(--pmb-text-muted-1);
+	font-size: 12px;
 }
 
-.pmb-card-checkbox {
+.pmb-card-project {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
+	gap: 4px;
+	min-width: 0;
+	overflow: hidden;
+	font-size: 10px;
+}
+
+.pmb-card-project-icon {
+	display: flex;
+	flex: 0 0 auto;
+	width: 11px;
+	height: 11px;
+	color: var(--pmb-text-muted-1);
+}
+
+.pmb-card-project-icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.pmb-card-priority {
+	flex: 0 0 auto;
+	color: var(--pmb-priority-text);
+	background-color: var(--pmb-priority-color);
+	font-size: 10px;
+	font-weight: 700;
+	padding: 2px 6px;
+	border-radius: 999px;
+}
+
+/* Row 2: the status ring and the title. */
+.pmb-card-main {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+}
+
+.pmb-card-status {
 	box-sizing: border-box;
-	width: 20px;
-	height: 20px;
-	border: 2px solid var(--background-modifier-border-hover);
+	width: 16px;
+	height: 16px;
+	flex: 0 0 16px;
+	border: 2px solid var(--pmb-status-idle);
 	border-radius: 50%;
 	background: none;
 	appearance: none;
+	padding: 0;
+}
+
+.pmb-card-status-overdue {
+	border-color: var(--pmb-accent);
+}
+
+.pmb-card-checkbox {
 	cursor: pointer;
 }
 
 .pmb-card-checkbox:hover {
-	border-color: var(--interactive-accent);
+	border-color: var(--pmb-accent);
 }
 
 .pmb-card-checkbox-checked {
-	background-color: var(--interactive-accent);
-	border-color: var(--interactive-accent);
+	background-color: var(--pmb-accent);
+	border-color: var(--pmb-accent);
 }
 
 .pmb-card-title {
 	flex: 1;
-	font-size: var(--font-ui-small);
-	font-weight: var(--font-semibold);
-	line-height: 1.3;
+	color: var(--pmb-text);
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.4;
 }
 
 .pmb-card-title-input {
@@ -360,23 +464,39 @@
 	font: inherit;
 	font-weight: inherit;
 	color: inherit;
-	background-color: var(--background-primary);
-	border: 1px solid var(--interactive-accent);
-	border-radius: var(--radius-s);
-	padding: 0 var(--size-2-2);
+	background-color: var(--pmb-surface);
+	border: 1px solid var(--pmb-accent);
+	border-radius: var(--pmb-radius-s);
+	padding: 0 4px;
 }
 
+/* Row 4: only on an Overdue card, its own date in place of the column name. */
 .pmb-card-date {
-	margin-top: var(--size-4-3);
-	color: var(--text-faint);
-	font-size: var(--font-ui-smaller);
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding-left: 24px;
+	color: var(--pmb-accent);
+	font-size: 12px;
+}
+
+.pmb-card-date-icon {
+	display: flex;
+	flex: 0 0 auto;
+	width: 12px;
+	height: 12px;
+}
+
+.pmb-card-date-icon svg {
+	width: 100%;
+	height: 100%;
 }
 
 /* On a phone a column that only shows part of itself is unreadable, so one
    nearly fills the screen and the board is swiped sideways between them. */
 @media (max-width: 600px) {
 	.pmb-board {
-		padding: var(--size-4-2);
+		padding: 16px;
 		overflow-y: hidden;
 	}
 
@@ -430,39 +550,55 @@
 	}
 }
 
+/* Row 3: tags (own icon, per-tag colour) and any other visible property,
+   wrapped tight since chips are meant to read as dense. */
 .pmb-card-meta {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: var(--size-2-3);
-	margin-top: var(--size-4-3);
+	row-gap: 2px;
+	column-gap: 6px;
+	padding-left: 24px;
 }
 
-.pmb-tag,
-.pmb-chip {
+.pmb-tag {
 	display: inline-flex;
 	align-items: center;
-	border-radius: 999px;
-	font-size: var(--font-ui-smaller);
+	gap: 4px;
+	font-size: 10px;
 	line-height: 1.4;
-	padding: var(--size-2-2) var(--size-4-2);
+	color: var(--pmb-tag-color, var(--pmb-text-muted-1));
 	max-width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	background-color: var(--background-modifier-hover);
-	color: var(--text-muted);
 }
 
-/* The dot carries the tag's colour instead of the pill's own background, so
-   the label stays legible without picking a contrasting text tone per tag. */
-.pmb-tag-dot {
-	flex-shrink: 0;
-	width: 8px;
-	height: 8px;
-	margin-right: var(--size-2-2);
-	border-radius: 50%;
-	background-color: var(--pmb-tag-color);
+.pmb-tag-icon {
+	display: flex;
+	flex: 0 0 auto;
+	width: 11px;
+	height: 11px;
+}
+
+.pmb-tag-icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.pmb-chip {
+	display: inline-flex;
+	align-items: center;
+	border-radius: 999px;
+	font-size: 10px;
+	line-height: 1.4;
+	padding: 2px 8px;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	background-color: var(--pmb-surface-2);
+	color: var(--pmb-text-muted-1);
 }
 
 .pmb-chip:empty {
