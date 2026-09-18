@@ -331,19 +331,6 @@
 	cursor: grabbing;
 }
 
-/* A touch drag's floating copy: the original stays put, dimmed by
-   .pmb-card-dragging above, while this one tracks the finger on top of
-   everything else on the board. Position comes entirely from the transform
-   a touch move sets, so top/left just anchor it to the viewport once. */
-.pmb-card-ghost {
-	position: fixed;
-	top: 0;
-	left: 0;
-	z-index: 100;
-	pointer-events: none;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-}
-
 .pmb-card:hover {
 	border-color: var(--pmb-border-hover);
 }
@@ -465,6 +452,12 @@
 	line-height: 1.4;
 }
 
+/* Pure white reads noticeably crisper than --pmb-text's off-white (#f2f2f2)
+   for the title specifically; every other dark-mode text stays as-is. */
+.theme-dark .pmb-card-title {
+	color: #ffffff;
+}
+
 .pmb-card-title-input {
 	width: 100%;
 	font: inherit;
@@ -532,15 +525,15 @@
 		max-height: 100%;
 	}
 
-	/* Narrow enough that the next (and previous) column's edge clearly peeks
-	   in on either side, rather than nearly filling the screen. */
+	/* center (not start) snaps each column in the middle of the viewport, so
+	   the next and previous columns peek in symmetrically on both edges. */
 	.pmb-column {
 		flex-basis: min(84vw, 320px);
-		scroll-snap-align: start;
+		scroll-snap-align: center;
 		scroll-snap-stop: always;
 	}
 
-	/* The board runs its own long-press-vs-drag gesture on a card (see
+	/* The board runs its own long-press-to-menu gesture on a card (see
 	   board-view.ts); the browser's own text-selection callout and highlight
 	   would otherwise fire from the same hold and fight it. */
 	.pmb-card {

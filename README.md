@@ -38,9 +38,10 @@ These are the things PM-Board sets out to do differently:
 - [x] Moving cards without a pointer or a drag
 - [x] Mobile layout
 - [x] Column header: add, rename, recolor, WIP limit, delete, drag to reorder
-- [x] Touch dragging on mobile: held still then moved drags the card, held
-      still then released opens the card menu; a touch that moves right
-      away is left to the browser as an ordinary scroll or swipe
+- [x] Touch-friendly mobile gestures: a held-then-released touch opens the
+      card menu (**Move to column**/**Move to lane** move it from there); a
+      touch that moves right away is left to the browser as an ordinary
+      scroll or swipe — no touch drag
 - [x] Filter the board to one value of a property (tags included): two
       buttons in the board's own header, one to pick the property, one for
       the value
@@ -148,25 +149,23 @@ column and position.
 
 ## Touch and mobile
 
-Cards drag on mobile too, just not with HTML5 drag and drop, which touch
-devices don't fire. A quick touch that moves right away — a scroll, a swipe
-between columns — is left entirely to the browser; the board only steps in
-once a touch has been held still long enough to count as deliberate. From
-there, moving the finger drags the card, following it within its column or
-into another one; releasing without moving opens the card's context menu
-(the same one described below) instead — the menu only appears once the
-finger lifts, not while it's still held down. Dragging near the left or
-right edge of the screen auto-scrolls the lane sideways to reach a column
-further off. This is entirely separate from the desktop experience, which
-keeps its own native drag and right-click menu untouched.
+There is no touch drag on mobile — dragging turned out to fight ordinary
+scrolling too often to be worth it. A quick touch that moves right away, a
+scroll or a swipe between columns, is left entirely to the browser; the
+board only steps in once a touch has been held still long enough to count
+as deliberate, and even then only to open the card's context menu (the same
+one described below) once the finger lifts — not while it's still held
+down. Moving a card on mobile goes through that menu's **Move to column** /
+**Move to lane** instead. This is entirely separate from the desktop
+experience, which keeps its own native drag and right-click menu untouched.
 
-On a narrow screen a column shows most of the screen's width, with a slice
-of the next (and previous) column peeking in at the edge, and a swipe pages
-between columns one at a time rather than free-scrolling. Each lane's row of
-columns keeps a fixed height and scrolls sideways on its own; scrolling to
-see more cards happens inside a column, not by scrolling the page — the
-same whether swimlanes are on or not. At wider sizes a laned
-board is still left to grow with its content instead.
+On a narrow screen a column sits centred with a slice of both the next and
+previous column peeking in at the edges, and a swipe pages between columns
+one at a time rather than free-scrolling. Each lane's row of columns keeps
+a fixed height and scrolls sideways on its own; scrolling to see more cards
+happens inside a column, not by scrolling the page — the same whether
+swimlanes are on or not. At wider sizes a laned board is still left to grow
+with its content instead.
 
 ## Card menu
 
@@ -186,8 +185,9 @@ Right-click (or long-press) a card for:
   next Monday's date to the property the board groups by. Only appear when
   that property holds dates, and only for the ones that would not just put
   the card back in the column it's already in.
-- **Move to column** / **Move to lane** — unchanged from before; still the
-  only way to move a card without a pointer.
+- **Move to column** / **Move to lane** — the only way to move a card
+  without a pointer, on the keyboard as well as on a touch device, which
+  has no card drag of its own.
 - **Delete** moves the note to your configured trash, after a confirmation
   that names the file.
 
@@ -305,12 +305,11 @@ to a rendered, read-only preview with an **Open note** button instead.
 - **The card's checkbox has no keyboard access.** It is not given its own tab
   stop, since the board is deliberately one tab stop per card; there is no
   keyboard path to toggle it yet.
-- **The reworked touch gesture (hold-then-move drags, hold-then-release opens
-  the menu, an early move is left to the browser) is unverified in a real
-  vault.** It replaces a version confirmed working except for the menu
-  interfering with an in-progress drag; this rewrite should remove that
-  interference by construction (the menu can no longer open once armed and
-  moving becomes a drag), but hasn't been tested on a phone yet.
+- **Touch drag was tried and removed.** It kept fighting ordinary scrolling
+  and swiping between columns, even after a rework meant to fix that; moving
+  a card on mobile now goes through the card menu's Move to column/lane
+  instead, same as the keyboard does. The simplified long-press-to-menu
+  gesture that replaced it is unverified in a real vault.
 - **Column drag-to-reorder has no touch or keyboard alternative.** Unlike
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through
