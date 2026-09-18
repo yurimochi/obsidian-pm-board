@@ -20,3 +20,38 @@ export function nextWeekStart(date: Date): Date {
 	const daysUntilNextMonday = (8 - date.getDay()) % 7 || 7;
 	return addDays(date, daysUntilNextMonday);
 }
+
+const WEEKDAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_ABBR = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+];
+
+/**
+ * A date column's header label: "17 Sep • Wed", swapping the weekday for
+ * "Today" or "Tomorrow" when the column matches one. `today` and `tomorrow`
+ * are taken as given rather than derived from `columnDate` here, since
+ * deriving "tomorrow" from an ISO date through `addDays` would read it back
+ * with local getters against a value `isoDate` parsed as UTC midnight — the
+ * two don't agree once the caller's own local time is behind UTC.
+ */
+export function columnDateLabel(columnDate: string, today: string, tomorrow: string): string {
+	const date = new Date(columnDate);
+	const day = String(date.getUTCDate()).padStart(2, "0");
+	const dayMonth = `${day} ${MONTH_ABBR[date.getUTCMonth()]}`;
+	const weekday = WEEKDAY_ABBR[date.getUTCDay()];
+
+	if (columnDate === today) return `${dayMonth} • Today • ${weekday}`;
+	if (columnDate === tomorrow) return `${dayMonth} • Tomorrow • ${weekday}`;
+	return `${dayMonth} • ${weekday}`;
+}

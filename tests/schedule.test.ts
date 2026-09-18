@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, isoDate, nextWeekStart } from "../src/schedule";
+import { addDays, columnDateLabel, isoDate, nextWeekStart } from "../src/schedule";
 
 // Dates are built with the local-time constructor (not an ISO string), so
 // these stay correct under any CI runner's timezone; addDays/nextWeekStart
@@ -60,5 +60,32 @@ describe("nextWeekStart", () => {
 	it("skips a full week when the date is already a Monday", () => {
 		const monday = local(2026, 9, 14);
 		expect(nextWeekStart(monday).getDate()).toBe(21);
+	});
+});
+
+describe("columnDateLabel", () => {
+	// UTC-anchored throughout (the function reads its input the same way
+	// isoDate produces it), so no local-time fixture is needed here.
+	const today = "2026-09-17";
+	const tomorrow = "2026-09-18";
+
+	it("labels today", () => {
+		expect(columnDateLabel("2026-09-17", today, tomorrow)).toBe("17 Sep • Today • Thu");
+	});
+
+	it("labels tomorrow", () => {
+		expect(columnDateLabel("2026-09-18", today, tomorrow)).toBe("18 Sep • Tomorrow • Fri");
+	});
+
+	it("labels any other date with just its weekday", () => {
+		expect(columnDateLabel("2026-09-20", today, tomorrow)).toBe("20 Sep • Sun");
+	});
+
+	it("pads a single-digit day", () => {
+		expect(columnDateLabel("2026-09-01", today, tomorrow)).toBe("01 Sep • Tue");
+	});
+
+	it("crosses a year boundary", () => {
+		expect(columnDateLabel("2026-01-01", today, tomorrow)).toBe("01 Jan • Thu");
 	});
 });

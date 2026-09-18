@@ -187,18 +187,15 @@ A column's header carries more than its name and count:
   since collapsing one just hides cards from landing or leaving on their own.
 - **+** adds a card straight to that column, collapsed or not. Hidden on
   Overdue, which has no date of its own for a new card to take.
-- **⋯** opens a menu:
-  - **Rename column** writes the new value to every card currently in the
-    column — a column is just a value of the grouped property, not a
-    setting of its own. Hidden for a date-grouped board, since a date has
-    no name to give it.
-  - **Change color** sets an accent stripe on the column's header.
-  - **Set WIP limit** does what setting `wipLimits` by hand always did, now
-    from the column itself. Leave the field empty to remove the limit.
-  - **Delete column** clears the grouped property on every card in the
-    column; the column disappears because nothing has that value anymore,
-    but the notes themselves are otherwise untouched. The item's own label
-    states how many cards that affects.
+- **⋯** opens a menu for renaming, recolouring, a WIP limit, and deleting
+  the column. Missing entirely on a date-grouped board — a date can't be
+  renamed, and there's nowhere left for the other three once that one's
+  gone, so the whole menu goes rather than trimming it item by item.
+
+On a date-grouped board, a column's own date (Overdue and the no-value
+column excepted, neither of which name one) reads as `17 Sep • Wed`, its
+weekday swapped for "Today" or "Tomorrow" where either applies, rather than
+the raw `2026-09-17` the property itself holds.
 
 A column's WIP limit, colour, collapsed state and place in the manual order
 all follow it when it is renamed, rather than resetting.
@@ -252,7 +249,9 @@ to a rendered, read-only preview with an **Open note** button instead.
   shows instead of a column name, and blocking cards from being moved or
   added to it directly — has not been exercised outside those tests. Neither
   has turning collapsing off entirely on a date-grouped board (every column
-  is meant to render expanded, with no chevron or click to collapse one).
+  is meant to render expanded, with no chevron or click to collapse one), nor
+  a date-grouped column's own header: its reformatted date (`columnDateLabel`
+  is tested on its own) and the "⋯" menu going missing entirely.
 - **Keyboard support is unverified.** The navigation and move logic is covered
   by tests, but the wiring between a keypress and the board has not been
   exercised in a running vault. Treat it as unfinished.

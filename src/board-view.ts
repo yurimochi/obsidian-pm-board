@@ -56,7 +56,7 @@ import {
 	sortByOrderKey,
 } from "./order";
 import { PromptModal } from "./prompt-modal";
-import { addDays, isoDate, nextWeekStart } from "./schedule";
+import { addDays, columnDateLabel, isoDate, nextWeekStart } from "./schedule";
 import {
 	buildLanes,
 	filterLanes,
@@ -76,6 +76,8 @@ const TOUCH_MOVE_THRESHOLD_PX = 10;
 const TOUCH_EDGE_SCROLL_ZONE_PX = 48;
 /** Auto-scroll speed, in pixels per animation frame. */
 const TOUCH_EDGE_SCROLL_SPEED_PX = 14;
+/** A date column's key, as isoDate produces it — guards columnDateLabel against a key that isn't one. */
+const ISO_DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** State for a card being moved by touch: a still hold opens the menu, a drag moves the card. */
 interface TouchDragState {
@@ -460,7 +462,7 @@ export class BoardView extends BasesView {
 				collapsed ? "lucide-chevron-right" : "lucide-chevron-down",
 			);
 		}
-		toggleEl.createSpan({ cls: "pmb-column-title", text: key ?? NO_VALUE_COLLAPSE_KEY });
+		toggleEl.createSpan({ cls: "pmb-column-title", text: this.columnTitle(key) });
 		toggleEl.createSpan({
 			cls: "pmb-column-count",
 			text:
@@ -484,12 +486,35 @@ export class BoardView extends BasesView {
 			);
 		}
 
-		const menuEl = actionsEl.createEl("button", { cls: "pmb-column-menu" });
-		menuEl.setAttribute("aria-label", "Column options");
-		setIcon(menuEl, "lucide-more-horizontal");
-		this.registerDomEvent(menuEl, "click", (event) =>
-			this.showColumnMenu(event, column, config),
-		);
+		// Rename, colour, WIP limit and delete all live behind this menu; a
+		// date-grouped board drops the whole thing rather than just Rename.
+		if (!this.dateGrouped) {
+			const menuEl = actionsEl.createEl("button", { cls: "pmb-column-menu" });
+			menuEl.setAttribute("aria-label", "Column options");
+			setIcon(menuEl, "lucide-more-horizontal");
+			this.registerDomEvent(menuEl, "click", (event) =>
+				this.showColumnMenu(event, column, config),
+			);
+		}
+	}
+
+	/**
+	 * A column's header title: its date, reformatted, on a date-grouped
+	 * board's own per-day columns; the raw key everywhere else, Overdue and
+	 * the no-value column included, since neither names a single date.
+	 */
+	private columnTitle(key: string | null): string {
+		if (
+			this.dateGrouped &&
+			key !== null &&
+			key !== OVERDUE_COLUMN_KEY &&
+			ISO_DATE_KEY.test(key)
+		) {
+			const today = isoDate(new Date());
+			const tomorrow = isoDate(addDays(new Date(), 1));
+			return columnDateLabel(key, today, tomorrow);
+		}
+		return key ?? NO_VALUE_COLLAPSE_KEY;
 	}
 
 	private renderDraggableCard(
