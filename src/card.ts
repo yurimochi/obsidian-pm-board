@@ -24,6 +24,8 @@ export function renderCard(
 	properties: BasesPropertyId[],
 	ctx: RenderContext,
 	resolveCover?: (entry: BasesEntry) => string | null,
+	/** The Overdue column's own date, shown since the column no longer names one. */
+	dueDateText?: string | null,
 ): RenderedCard {
 	const cardEl = parentEl.createDiv({ cls: "pmb-card" });
 
@@ -69,7 +71,9 @@ export function renderCard(
 		if (tags.length > 0) renderTags(metaEl, tags, config);
 	}
 
-	cardEl.createDiv({ cls: "pmb-card-date", text: createdLabel(entry) });
+	if (dueDateText) {
+		cardEl.createDiv({ cls: "pmb-card-date", text: dueDateText });
+	}
 
 	return { cardEl, checkboxProperty };
 }
@@ -113,13 +117,4 @@ export function valuesOf(value: Value): string[] {
 		if (text) items.push(text);
 	}
 	return items;
-}
-
-const CREATED_DATE_FORMAT: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-
-function createdLabel(entry: BasesEntry): string {
-	const date = new Intl.DateTimeFormat(undefined, CREATED_DATE_FORMAT).format(
-		entry.file.stat.ctime,
-	);
-	return `Created ${date}`;
 }

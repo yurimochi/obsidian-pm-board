@@ -42,6 +42,8 @@ These are the things PM-Board sets out to do differently:
 - [x] Filter the board to one value of a property (tags included): two
       buttons in the board's own header, one to pick the property, one for
       the value
+- [x] Overdue: on a date-grouped board, yesterday and earlier collapse into
+      one leading column instead of growing a new one every day
 - [ ] Projects: a way to group cards by a property, above individual boards
 - [ ] Move board settings into the plugin's own settings tab, instead of
       hand-edited `.base` YAML
@@ -180,7 +182,8 @@ A column's header carries more than its name and count:
 - **The grip handle** drags the column to reorder it, when the board groups
   by anything other than a date. A date's own order already comes from the
   date; there is nothing to drag it into.
-- **+** adds a card straight to that column, collapsed or not.
+- **+** adds a card straight to that column, collapsed or not. Hidden on
+  Overdue, which has no date of its own for a new card to take.
 - **⋯** opens a menu:
   - **Rename column** writes the new value to every card currently in the
     column — a column is just a value of the grouped property, not a
@@ -196,6 +199,21 @@ A column's header carries more than its name and count:
 
 A column's WIP limit, colour, collapsed state and place in the manual order
 all follow it when it is renamed, rather than resetting.
+
+## Overdue
+
+Grouping by a date property merges yesterday's column and every one before it
+into a single leading **Overdue** column, per lane; today's and every future
+date keep their own column, same as always. Since Overdue no longer names one
+date, each of its cards carries its own instead, in place of the space a
+regular card leaves blank there.
+
+Overdue is worked out fresh from each card's own date on every redraw, not a
+value stored anywhere, so a card can't be dragged, moved, or added straight
+into it the way it could a real column — it leaves once its date does,
+scheduling it forward the usual way (drag it to a later column, or use the
+card menu's Schedule actions). Renaming, WIP limits, colour, and delete all
+still work on it like any other column.
 
 ## Card detail
 
@@ -225,6 +243,11 @@ to a rendered, read-only preview with an **Open note** button instead.
 
 ## Known gaps
 
+- **Overdue is unverified in a vault.** Which columns get merged is covered
+  by tests through `mergeOverdueColumns`, but the column itself — appearing
+  only on a date-grouped board, showing the right cards, the per-card date it
+  shows instead of a column name, and blocking cards from being moved or
+  added to it directly — has not been exercised outside those tests.
 - **Keyboard support is unverified.** The navigation and move logic is covered
   by tests, but the wiring between a keypress and the board has not been
   exercised in a running vault. Treat it as unfinished.

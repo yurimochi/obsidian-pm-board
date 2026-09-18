@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BasesEntry, BasesEntryGroup } from "obsidian";
-import { buildLanes, filterLanes, Lane } from "../src/swimlanes";
+import { buildLanes, filterLanes, Lane, mergeOverdueColumns, OVERDUE_COLUMN_KEY } from "../src/swimlanes";
 
 /** An entry identified by name, carrying the value the lane axis groups on. */
 function entry(name: string, lane: string | null): BasesEntry {
@@ -141,5 +141,71 @@ describe("filterLanes", () => {
 		const original = lanes();
 		filterLanes(original, () => false);
 		expect(original[0].columns[0].entries).toHaveLength(2);
+	});
+});
+
+describe("mergeOverdueColumns", () => {
+	const today = "2026-09-17";
+
+	it("merges every column dated before today into one, in front of the rest", () => {
+		const lanes: Lane[] = [
+			{
+				key: null,
+				columns: [
+					{ key: "2026-09-15", entries: [entry("a", null)] },
+					{ key: "2026-09-16", entries: [entry("b", null)] },
+					{ key: "2026-09-17", entries: [entry("c", null)] },
+					{ key: "2026-09-18", entries: [entry("d", null)] },
+				],
+			},
+		];
+
+		const merged = mergeOverdueColumns(lanes, today);
+
+		expect(merged[0].columns.map((c) => c.key)).toEqual([
+			OVERDUE_COLUMN_KEY,
+			"2026-09-17",
+			"2026-09-18",
+		]);
+		expect(names(merged[0].columns[0].entries)).toEqual(["a", "b"]);
+	});
+
+	it("leaves the no-value column alone", () => {
+		const lanes: Lane[] = [
+			{
+				key: null,
+				columns: [
+					{ key: "2026-09-15", entries: [entry("a", null)] },
+					{ key: null, entries: [entry("b", null)] },
+				],
+			},
+		];
+
+		const merged = mergeOverdueColumns(lanes, today);
+
+		expect(merged[0].columns.map((c) => c.key)).toEqual([OVERDUE_COLUMN_KEY, null]);
+		expect(names(merged[0].columns[1].entries)).toEqual(["b"]);
+	});
+
+	it("adds no Overdue column when nothing is before today", () => {
+		const lanes: Lane[] = [
+			{ key: null, columns: [{ key: "2026-09-17", entries: [entry("a", null)] }] },
+		];
+
+		const merged = mergeOverdueColumns(lanes, today);
+
+		expect(merged[0].columns.map((c) => c.key)).toEqual(["2026-09-17"]);
+	});
+
+	it("merges independently per lane", () => {
+		const lanes: Lane[] = [
+			{ key: "team-1", columns: [{ key: "2026-09-01", entries: [entry("a", null)] }] },
+			{ key: "team-2", columns: [{ key: "2026-09-17", entries: [entry("b", null)] }] },
+		];
+
+		const merged = mergeOverdueColumns(lanes, today);
+
+		expect(merged[0].columns.map((c) => c.key)).toEqual([OVERDUE_COLUMN_KEY]);
+		expect(merged[1].columns.map((c) => c.key)).toEqual(["2026-09-17"]);
 	});
 });

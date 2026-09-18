@@ -57,7 +57,14 @@ import {
 } from "./order";
 import { PromptModal } from "./prompt-modal";
 import { addDays, isoDate, nextWeekStart } from "./schedule";
-import { buildLanes, filterLanes, Lane, LaneColumn } from "./swimlanes";
+import {
+	buildLanes,
+	filterLanes,
+	Lane,
+	LaneColumn,
+	mergeOverdueColumns,
+	OVERDUE_COLUMN_KEY,
+} from "./swimlanes";
 import { applyPlaceholders, joinPath, uniqueName } from "./template";
 import { parseTagList } from "./tag-colors";
 
@@ -164,6 +171,13 @@ export class BoardView extends BasesView {
 			groupKeyOf,
 			laneProperty ? (entry) => textValueOf(entry, laneProperty) : null,
 		);
+
+		// Yesterday and earlier collapse into one Overdue column per lane, so a
+		// date-grouped board doesn't grow a fresh column for every day that
+		// passes; today's and future columns are untouched.
+		if (this.dateGrouped) {
+			lanes = mergeOverdueColumns(lanes, isoDate(new Date()));
+		}
 
 		// Both the property and its values come from every entry the query
 		// returned, not the (possibly already filtered) lanes, so narrowing the
@@ -380,13 +394,25 @@ export class BoardView extends BasesView {
 		// the DOM node; these place it back at a lane and column.
 		cardsEl.dataset.lane = String(at.lane);
 		cardsEl.dataset.column = String(at.column);
+		// Overdue merges several dates into one column, so its own cards carry
+		// the date the column itself no longer states.
+		const isOverdue = key === OVERDUE_COLUMN_KEY;
+		const dueDateProperty = isOverdue
+			? (groupByPropertyOf(this.config) as BasesPropertyId | null)
+			: null;
 		ordered.forEach((entry, index) => {
-			this.renderDraggableCard(cardsEl, entry, config, properties, {
-				...at,
-				index,
-			});
+			this.renderDraggableCard(
+				cardsEl,
+				entry,
+				config,
+				properties,
+				{ ...at, index },
+				dueDateProperty ? textValueOf(entry, dueDateProperty) : null,
+			);
 		});
-		this.registerDropTarget(cardsEl, key, ordered, laneKey);
+		// Overdue is computed fresh on every render; a card dropped there would
+		// have nothing to write, so it isn't offered as a drop target at all.
+		if (!isOverdue) this.registerDropTarget(cardsEl, key, ordered, laneKey);
 	}
 
 	private renderColumnHeader(
@@ -437,12 +463,16 @@ export class BoardView extends BasesView {
 		this.registerDomEvent(toggleEl, "click", () => this.toggleColumn(key, collapsed));
 
 		const actionsEl = headerEl.createDiv({ cls: "pmb-column-actions" });
-		const addEl = actionsEl.createEl("button", { cls: "pmb-column-add" });
-		addEl.setAttribute("aria-label", "Add card");
-		setIcon(addEl, "lucide-plus");
-		this.registerDomEvent(addEl, "click", () =>
-			this.report(this.addCard(key, config, ordered, laneKey), "Could not add the card."),
-		);
+		// Overdue isn't a value a new card could carry, so there's nothing here
+		// for adding a card to mean.
+		if (key !== OVERDUE_COLUMN_KEY) {
+			const addEl = actionsEl.createEl("button", { cls: "pmb-column-add" });
+			addEl.setAttribute("aria-label", "Add card");
+			setIcon(addEl, "lucide-plus");
+			this.registerDomEvent(addEl, "click", () =>
+				this.report(this.addCard(key, config, ordered, laneKey), "Could not add the card."),
+			);
+		}
 
 		const menuEl = actionsEl.createEl("button", { cls: "pmb-column-menu" });
 		menuEl.setAttribute("aria-label", "Column options");
@@ -458,6 +488,7 @@ export class BoardView extends BasesView {
 		config: BoardConfig,
 		properties: BasesPropertyId[],
 		at: BoardPosition,
+		dueDateText: string | null,
 	): void {
 		const { cardEl, checkboxProperty } = renderCard(
 			cardsEl,
@@ -466,6 +497,7 @@ export class BoardView extends BasesView {
 			properties,
 			this.renderContext,
 			(target) => this.coverSrcOf(target, config),
+			dueDateText,
 		);
 		cardEl.draggable = true;
 		cardEl.tabIndex = -1;
@@ -1134,6 +1166,16 @@ export class BoardView extends BasesView {
 		columnEntries: BasesEntry[],
 		laneKey: string | null,
 	): Promise<void> {
+		// Overdue is computed fresh from every card's own date on every render;
+		// it has none of its own to write, so a card can't be dropped here
+		// directly the way it could a real column.
+		if (columnKey === OVERDUE_COLUMN_KEY) {
+			new Notice(
+				"Overdue is worked out from a card's own date; move it to a specific date instead.",
+			);
+			return;
+		}
+
 		const config = readBoardConfig(this.config);
 		const groupProperty = groupByPropertyOf(this.config);
 		if (!groupProperty) {
@@ -1390,6 +1432,9 @@ export class BoardView extends BasesView {
 		menu.addSeparator();
 		menu.addItem((item) => item.setIsLabel(true).setTitle("Move to column"));
 		lane.columns.forEach((col, index) => {
+			// Overdue is computed fresh from every other column's own date, so
+			// it isn't itself a place to move a card to.
+			if (col.key === OVERDUE_COLUMN_KEY) return;
 			menu.addItem((item) =>
 				item
 					.setTitle(col.key ?? NO_VALUE_COLLAPSE_KEY)

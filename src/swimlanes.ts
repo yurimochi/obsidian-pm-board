@@ -62,3 +62,28 @@ export function filterLanes(lanes: Lane[], matches: (entry: BasesEntry) => boole
 		})),
 	}));
 }
+
+/** The synthetic column every column keyed before today is merged into. */
+export const OVERDUE_COLUMN_KEY = "Overdue";
+
+/**
+ * Collapses every column dated strictly before `today`, in each lane, into a
+ * single leading Overdue column; today's, future, and the no-value column are
+ * left as they are, in their existing order. A lane with nothing overdue
+ * keeps none of this, the same as any other column with no cards in it.
+ */
+export function mergeOverdueColumns(lanes: Lane[], today: string): Lane[] {
+	return lanes.map((lane) => {
+		const overdue: BasesEntry[] = [];
+		const rest: LaneColumn[] = [];
+		for (const column of lane.columns) {
+			if (column.key !== null && column.key < today) overdue.push(...column.entries);
+			else rest.push(column);
+		}
+		if (overdue.length === 0) return { key: lane.key, columns: rest };
+		return {
+			key: lane.key,
+			columns: [{ key: OVERDUE_COLUMN_KEY, entries: overdue }, ...rest],
+		};
+	});
+}
