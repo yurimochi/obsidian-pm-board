@@ -532,10 +532,10 @@
 		max-height: 100%;
 	}
 
-	/* Near the full screen width, with just enough left over for the next
-	   (or previous) column to peek in at the edge. */
+	/* Narrow enough that the next (and previous) column's edge clearly peeks
+	   in on either side, rather than nearly filling the screen. */
 	.pmb-column {
-		flex-basis: min(94vw, 420px);
+		flex-basis: min(84vw, 320px);
 		scroll-snap-align: start;
 		scroll-snap-stop: always;
 	}
@@ -550,6 +550,14 @@
 
 	.pmb-card-cover {
 		aspect-ratio: 2 / 1;
+	}
+
+	.pmb-cards {
+		gap: 8px;
+	}
+
+	.pmb-card-title {
+		font-weight: 700;
 	}
 
 	/* Comfortable targets for a finger rather than a pointer. */

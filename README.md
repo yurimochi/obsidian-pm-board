@@ -38,7 +38,9 @@ These are the things PM-Board sets out to do differently:
 - [x] Moving cards without a pointer or a drag
 - [x] Mobile layout
 - [x] Column header: add, rename, recolor, WIP limit, delete, drag to reorder
-- [x] Touch dragging on mobile: a still hold opens the card menu, a moving one drags the card
+- [x] Touch dragging on mobile: held still then moved drags the card, held
+      still then released opens the card menu; a touch that moves right
+      away is left to the browser as an ordinary scroll or swipe
 - [x] Filter the board to one value of a property (tags included): two
       buttons in the board's own header, one to pick the property, one for
       the value
@@ -52,13 +54,8 @@ These are the things PM-Board sets out to do differently:
       hand-edited `.base` YAML
 - [ ] Experience polish:
       - Better tag colour editing than a raw hex prompt
-      - Smoother scrolling on mobile's horizontal column strip
       - Touch drag-to-reorder for columns (cards already have it; the header's
         grip handle is still pointer-only)
-      - Touch dragging a card feels held back by the card menu itself: on a
-        phone the menu is its own modal-like overlay, and something about it
-        loading gets in the way of the drag, confirmed in a real vault. Kept
-        as-is for now; needs a proper look at why the two interfere
 
 ## Swimlanes
 
@@ -152,18 +149,23 @@ column and position.
 ## Touch and mobile
 
 Cards drag on mobile too, just not with HTML5 drag and drop, which touch
-devices don't fire: a still hold opens the card's context menu (the same one
-described below), while a hold that starts moving instead drags the card,
-following the finger, within its column or into another one. Dragging near
-the left or right edge of the screen auto-scrolls the lane sideways to reach
-a column further off. This is entirely separate from the desktop experience,
-which keeps its own native drag and right-click menu untouched.
+devices don't fire. A quick touch that moves right away — a scroll, a swipe
+between columns — is left entirely to the browser; the board only steps in
+once a touch has been held still long enough to count as deliberate. From
+there, moving the finger drags the card, following it within its column or
+into another one; releasing without moving opens the card's context menu
+(the same one described below) instead — the menu only appears once the
+finger lifts, not while it's still held down. Dragging near the left or
+right edge of the screen auto-scrolls the lane sideways to reach a column
+further off. This is entirely separate from the desktop experience, which
+keeps its own native drag and right-click menu untouched.
 
-On a narrow screen a column nearly fills the width and the board is swiped
-sideways between columns, so a column is readable rather than half visible.
-Each lane's row of columns keeps a fixed height and scrolls sideways on its
-own; scrolling to see more cards happens inside a column, not by scrolling
-the page — the same whether swimlanes are on or not. At wider sizes a laned
+On a narrow screen a column shows most of the screen's width, with a slice
+of the next (and previous) column peeking in at the edge, and a swipe pages
+between columns one at a time rather than free-scrolling. Each lane's row of
+columns keeps a fixed height and scrolls sideways on its own; scrolling to
+see more cards happens inside a column, not by scrolling the page — the
+same whether swimlanes are on or not. At wider sizes a laned
 board is still left to grow with its content instead.
 
 ## Card menu
@@ -303,11 +305,12 @@ to a rendered, read-only preview with an **Open note** button instead.
 - **The card's checkbox has no keyboard access.** It is not given its own tab
   stop, since the board is deliberately one tab stop per card; there is no
   keyboard path to toggle it yet.
-- **Touch dragging a card is rough around the edges.** Confirmed in a real
-  vault: the still-hold-opens-the-menu half works, but dragging feels held
-  back by the menu itself — on a phone it's its own modal-like overlay, and
-  something about it loading interferes with the drag already in progress.
-  Left as-is for now; see the roadmap's Experience polish bucket.
+- **The reworked touch gesture (hold-then-move drags, hold-then-release opens
+  the menu, an early move is left to the browser) is unverified in a real
+  vault.** It replaces a version confirmed working except for the menu
+  interfering with an in-progress drag; this rewrite should remove that
+  interference by construction (the menu can no longer open once armed and
+  moving becomes a drag), but hasn't been tested on a phone yet.
 - **Column drag-to-reorder has no touch or keyboard alternative.** Unlike
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through

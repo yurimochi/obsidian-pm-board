@@ -91,8 +91,12 @@ interface TouchDragState {
 	lastX: number;
 	lastY: number;
 	longPressTimer: number;
-	/** The long press already fired (the menu is open, or about to be); the touch is spent. */
-	menuShown: boolean;
+	/**
+	 * The hold has lasted long enough to count as deliberate: a release from
+	 * here opens the menu, a move from here starts a drag. A touch that
+	 * moves before reaching this is neither — just a normal scroll or swipe.
+	 */
+	armed: boolean;
 	dragging: boolean;
 	ghostEl: HTMLElement | null;
 	grabOffsetX: number;
@@ -607,9 +611,11 @@ export class BoardView extends BasesView {
 	}
 
 	/**
-	 * Starts tracking a touch on a card. What it turns into is decided as the
-	 * touch continues: held still, it opens the card menu (`onTouchLongPress`);
-	 * moved past the threshold first, it becomes a drag (`startTouchDrag`).
+	 * Starts tracking a touch on a card. Nothing happens yet: a touch that
+	 * moves before the hold matures is just a scroll or a swipe, left to the
+	 * browser (`onCardTouchMove`). Only once it's held still long enough to
+	 * arm (`onTouchLongPress`) does the touch mean anything — a move from
+	 * there starts a drag, a release opens the card menu (`onCardTouchEnd`).
 	 */
 	private onCardTouchStart(
 		event: TouchEvent,
@@ -635,7 +641,7 @@ export class BoardView extends BasesView {
 			lastX: touch.clientX,
 			lastY: touch.clientY,
 			longPressTimer: window.setTimeout(() => this.onTouchLongPress(), TOUCH_LONG_PRESS_MS),
-			menuShown: false,
+			armed: false,
 			dragging: false,
 			ghostEl: null,
 			grabOffsetX: touch.clientX - rect.left,
@@ -647,33 +653,34 @@ export class BoardView extends BasesView {
 		};
 	}
 
-	/** The touch has been held still for the long-press duration: open the card menu. */
+	/** The touch has been held still for the long-press duration: arm it, but wait to see what happens next. */
 	private onTouchLongPress(): void {
 		const state = this.touchDrag;
 		if (!state || state.dragging) return;
-		state.menuShown = true;
-		this.showCardMenu(
-			{ x: state.lastX, y: state.lastY },
-			state.entry,
-			state.config,
-			state.at,
-			state.cardEl,
-		);
+		state.armed = true;
 	}
 
 	private onCardTouchMove(event: TouchEvent): void {
 		const state = this.touchDrag;
-		if (!state || state.menuShown) return;
+		if (!state) return;
 		const touch = touchWithId(event.touches, state.pointerId);
 		if (!touch) return;
 		state.lastX = touch.clientX;
 		state.lastY = touch.clientY;
 
 		if (!state.dragging) {
-			const dx = touch.clientX - state.startX;
-			const dy = touch.clientY - state.startY;
-			if (Math.hypot(dx, dy) < TOUCH_MOVE_THRESHOLD_PX) return;
-			// Movement beat the hold: this is a drag, not a long press.
+			if (!state.armed) {
+				const dx = touch.clientX - state.startX;
+				const dy = touch.clientY - state.startY;
+				if (Math.hypot(dx, dy) < TOUCH_MOVE_THRESHOLD_PX) return;
+				// Moved before the hold matured: a scroll or a swipe, not our
+				// gesture — hand the touch back to the browser untouched.
+				window.clearTimeout(state.longPressTimer);
+				this.teardownTouchDrag(state);
+				this.touchDrag = null;
+				return;
+			}
+			// Armed and now moving: this is a drag, not a release.
 			window.clearTimeout(state.longPressTimer);
 			this.startTouchDrag(state);
 		}
@@ -693,6 +700,16 @@ export class BoardView extends BasesView {
 		if (state.dragging) {
 			event.preventDefault();
 			this.finishTouchDrag(state);
+		} else if (state.armed) {
+			// Held, then released without moving: open the menu now rather
+			// than while the finger was still down over it.
+			this.showCardMenu(
+				{ x: state.lastX, y: state.lastY },
+				state.entry,
+				state.config,
+				state.at,
+				state.cardEl,
+			);
 		}
 		this.teardownTouchDrag(state);
 		this.touchDrag = null;
