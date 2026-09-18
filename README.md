@@ -240,17 +240,6 @@ to a rendered, read-only preview with an **Open note** button instead.
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through
   `boardColumns`.
-- **Filtering is unverified in a vault.** Which cards a chosen value hides is
-  covered by tests through `filterLanes`, but the two buttons themselves —
-  appearing, listing the right properties and values, writing the choice
-  back, restoring it on reopen — have not been exercised outside those
-  tests. An earlier version of the property button, backed by a bare
-  `<select>`, never rendered on a real vault for reasons that resisted
-  diagnosis even with console logging and a visible Notice; a later attempt
-  moved the property choice into the view's own settings instead, which
-  wasn't the flow wanted, so both buttons are back in the board's own
-  header, now built the same way the value button always was (a Menu, not
-  a `<select>`) — unconfirmed whether that was ever the actual problem.
 - **Sort by taking over card order is unverified in a vault.** The wiring
   is small (`getSort().length > 0` gates a couple of code paths), but
   `getSort()`'s exact behavior — whether it reflects a change immediately,
