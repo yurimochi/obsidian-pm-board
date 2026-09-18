@@ -305,7 +305,13 @@ export class BoardView extends BasesView {
 		const path = this.pendingFocus;
 		this.pendingFocus = null;
 		if (!path) return;
-		this.cardElementFor(path)?.focus();
+		const cardEl = this.cardElementFor(path);
+		if (!cardEl) return;
+		// Explicit over relying on focus()'s own scroll-into-view: this also
+		// centres the card's column on mobile, matching where a swipe would
+		// snap it, rather than just nudging it minimally into view.
+		cardEl.scrollIntoView({ behavior: "auto", inline: "center", block: "nearest" });
+		cardEl.focus({ preventScroll: true });
 	}
 
 	private cardElementFor(path: string): HTMLElement | null {
@@ -998,7 +1004,15 @@ export class BoardView extends BasesView {
 	): Promise<void> {
 		const target = resolveOpenTarget(config.cardOpenBehavior, modifiers);
 		if (target === "modal") {
-			new CardDetailModal(this.app, file).open();
+			// Closing the modal can trigger a redraw (the host re-querying after
+			// touching the file), which would otherwise scroll the board back to
+			// wherever it happened to land rather than back to this card. Set on
+			// close, not on open: a live leaf can redraw the board while still
+			// open too, which would consume this early and miss the redraw that
+			// actually matters.
+			new CardDetailModal(this.app, file, () => {
+				this.pendingFocus = file.path;
+			}).open();
 			return;
 		}
 		await this.app.workspace.getLeaf(target).openFile(file);

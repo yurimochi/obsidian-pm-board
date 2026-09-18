@@ -35,6 +35,8 @@ export class CardDetailModal extends Modal {
 	constructor(
 		app: App,
 		private readonly file: TFile,
+		/** Called once the modal has fully closed, its leaf detached and all. */
+		private readonly onDismiss?: () => void,
 	) {
 		super(app);
 		this.modalEl.addClass("pmb-card-detail");
@@ -58,6 +60,7 @@ export class CardDetailModal extends Modal {
 		this.detachLeaf();
 		this.renderer.unload();
 		this.contentEl.empty();
+		this.onDismiss?.();
 	}
 
 	private async openLiveLeaf(): Promise<void> {
