@@ -511,14 +511,21 @@
 
 	/* mandatory (not proximity) locks a swipe to landing on exactly one
 	   column, the way a native paged carousel does, rather than letting it
-	   settle wherever momentum happens to run out. */
+	   settle wherever momentum happens to run out. The inline padding
+	   (matching the empty space center-alignment already leaves on either
+	   side of a column) gives the very first and last column that same room
+	   to scroll into a centred position too, rather than stopping flush
+	   against the edge once there's no sibling left to make space for it. */
 	.pmb-lane-columns {
+		--pmb-column-peek: min(84vw, 320px);
 		flex: 1;
 		min-height: 0;
 		overflow-x: auto;
 		scroll-snap-type: x mandatory;
 		scroll-behavior: smooth;
 		-webkit-overflow-scrolling: touch;
+		padding-inline: calc((100% - var(--pmb-column-peek)) / 2);
+		scroll-padding-inline: calc((100% - var(--pmb-column-peek)) / 2);
 	}
 
 	.pmb-board-laned .pmb-column {
@@ -528,7 +535,7 @@
 	/* center (not start) snaps each column in the middle of the viewport, so
 	   the next and previous columns peek in symmetrically on both edges. */
 	.pmb-column {
-		flex-basis: min(84vw, 320px);
+		flex-basis: var(--pmb-column-peek);
 		scroll-snap-align: center;
 		scroll-snap-stop: always;
 	}
