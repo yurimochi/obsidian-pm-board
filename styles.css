@@ -517,7 +517,7 @@
 	   to scroll into a centred position too, rather than stopping flush
 	   against the edge once there's no sibling left to make space for it. */
 	.pmb-lane-columns {
-		--pmb-column-peek: min(94vw, 320px);
+		--pmb-column-peek: 94vw;
 		flex: 1;
 		min-height: 0;
 		overflow-x: auto;
