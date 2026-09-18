@@ -516,20 +516,28 @@
 		min-height: 0;
 	}
 
+	/* mandatory (not proximity) locks a swipe to landing on exactly one
+	   column, the way a native paged carousel does, rather than letting it
+	   settle wherever momentum happens to run out. */
 	.pmb-lane-columns {
 		flex: 1;
 		min-height: 0;
 		overflow-x: auto;
-		scroll-snap-type: x proximity;
+		scroll-snap-type: x mandatory;
+		scroll-behavior: smooth;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.pmb-board-laned .pmb-column {
 		max-height: 100%;
 	}
 
+	/* Near the full screen width, with just enough left over for the next
+	   (or previous) column to peek in at the edge. */
 	.pmb-column {
-		flex-basis: min(86vw, 340px);
+		flex-basis: min(94vw, 420px);
 		scroll-snap-align: start;
+		scroll-snap-stop: always;
 	}
 
 	/* The board runs its own long-press-vs-drag gesture on a card (see
