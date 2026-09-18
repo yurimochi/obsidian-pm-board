@@ -494,9 +494,19 @@
 /* On a phone a column that only shows part of itself is unreadable, so one
    nearly fills the screen and the board is swiped sideways between them. */
 @media (max-width: 600px) {
+	/* Horizontal padding drops out here: the lane's own padding-inline below
+	   (which the column-peek math already needs to add up correctly) is
+	   what insets the columns, and doing it there instead lets the board's
+	   own background reach the screen edges rather than stopping short of
+	   them on both sides. The filter row keeps its own inset since it isn't
+	   part of that horizontally-scrolling area. */
 	.pmb-board {
-		padding: 16px;
+		padding: 16px 0;
 		overflow-y: hidden;
+	}
+
+	.pmb-filter {
+		padding-inline: 16px;
 	}
 
 	/* A lane's row of columns keeps a fixed height and scrolls sideways on
