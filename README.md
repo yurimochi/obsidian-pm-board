@@ -7,9 +7,9 @@ kanban-style board whose columns come from the Base's own `groupBy`
 configuration. Cards are your notes; moving a card writes the change straight
 back to the note's frontmatter.
 
-> **Status: early development (0.1.0).** Everything on the roadmap below is
-> built, but only the pointer-driven paths have been exercised in a running
-> vault. See **Known gaps** before relying on the rest.
+> **Status: early development (0.5.3).** Everything on the roadmap below is
+> built, and most of it confirmed working in a running vault. See
+> **Known gaps** for what hasn't been yet.
 
 ## Design goals
 
@@ -243,15 +243,6 @@ to a rendered, read-only preview with an **Open note** button instead.
 
 ## Known gaps
 
-- **Overdue is unverified in a vault.** Which columns get merged is covered
-  by tests through `mergeOverdueColumns`, but the column itself — appearing
-  only on a date-grouped board, showing the right cards, the per-card date it
-  shows instead of a column name, and blocking cards from being moved or
-  added to it directly — has not been exercised outside those tests. Neither
-  has turning collapsing off entirely on a date-grouped board (every column
-  is meant to render expanded, with no chevron or click to collapse one), nor
-  a date-grouped column's own header: its reformatted date (`columnDateLabel`
-  is tested on its own) and the "⋯" menu going missing entirely.
 - **Keyboard support is unverified.** The navigation and move logic is covered
   by tests, but the wiring between a keypress and the board has not been
   exercised in a running vault. Treat it as unfinished.
