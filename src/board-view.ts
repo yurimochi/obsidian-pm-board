@@ -147,6 +147,11 @@ export class BoardView extends BasesView {
 
 	onDataUpdated(): void {
 		if (!this.boardEl) return;
+		// TEMPORARY: confirms this method actually runs at all, independent of
+		// the console (which showed nothing for the debug log below, and no
+		// exception either) — visible without opening DevTools. Remove once
+		// the list filter is diagnosed.
+		new Notice("PM-Board: onDataUpdated ran");
 		const config = readBoardConfig(this.config);
 		const properties = this.config.getOrder();
 		const laneProperty = config.swimlaneProperty;
@@ -173,26 +178,35 @@ export class BoardView extends BasesView {
 		// ones toggled visible on the board: a property can hold a real list
 		// worth filtering by without being one of the chips shown on a card.
 		const allEntries = this.data.data;
-		const candidateProperties = [...new Set([...properties, ...this.allProperties])];
-		const filterableProperties = listProperties(candidateProperties, allEntries);
+		let filterableProperties: BasesPropertyId[] = [];
 		// TEMPORARY: diagnosing why no property is being detected as a list on
-		// a real vault where one clearly should be. Safe to remove once fixed.
-		console.debug("PM-Board list filter diagnostics", {
-			visibleProperties: properties,
-			allProperties: this.allProperties,
-			entryCount: allEntries.length,
-			filterableProperties,
-			sample: candidateProperties.map((property) => {
-				const first = allEntries.find((entry) => entry.getValue(property));
-				const value = first?.getValue(property);
-				return {
-					property,
-					constructorName: value?.constructor?.name ?? null,
-					isListValue: value instanceof ListValue,
-					text: value?.toString() ?? null,
-				};
-			}),
-		});
+		// a real vault where one clearly should be. console.error rather than
+		// .debug, since nothing printed last time and errors can't be filtered
+		// out by the console's log-level setting; wrapped so a throw here
+		// can't silently take the rest of the render down with it.
+		try {
+			const candidateProperties = [...new Set([...properties, ...this.allProperties])];
+			filterableProperties = listProperties(candidateProperties, allEntries);
+			console.error("PM-Board list filter diagnostics", {
+				visibleProperties: properties,
+				allProperties: this.allProperties,
+				entryCount: allEntries.length,
+				filterableProperties,
+				sample: candidateProperties.map((property) => {
+					const first = allEntries.find((entry) => entry.getValue(property));
+					const value = first?.getValue(property);
+					return {
+						property,
+						constructorName: value?.constructor?.name ?? null,
+						isListValue: value instanceof ListValue,
+						text: value?.toString() ?? null,
+					};
+				}),
+			});
+		} catch (error) {
+			console.error("PM-Board list filter diagnostics threw", error);
+			new Notice("PM-Board: list filter diagnostics threw, see console");
+		}
 		if (config.listFilterProperty && config.listFilterValue) {
 			const property = config.listFilterProperty;
 			const value = config.listFilterValue;
