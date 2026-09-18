@@ -460,7 +460,7 @@
 .pmb-card-title {
 	flex: 1;
 	color: var(--pmb-text);
-	font-size: 12px;
+	font-size: 14px;
 	font-weight: 500;
 	line-height: 1.4;
 }
