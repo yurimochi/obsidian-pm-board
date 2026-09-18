@@ -4,7 +4,6 @@ import {
 	BasesView,
 	DateValue,
 	Keymap,
-	ListValue,
 	Menu,
 	moment,
 	normalizePath,
@@ -147,11 +146,6 @@ export class BoardView extends BasesView {
 
 	onDataUpdated(): void {
 		if (!this.boardEl) return;
-		// TEMPORARY: confirms this method actually runs at all, independent of
-		// the console (which showed nothing for the debug log below, and no
-		// exception either) — visible without opening DevTools. Remove once
-		// the list filter is diagnosed.
-		new Notice("PM-Board: onDataUpdated ran");
 		const config = readBoardConfig(this.config);
 		const properties = this.config.getOrder();
 		const laneProperty = config.swimlaneProperty;
@@ -171,42 +165,11 @@ export class BoardView extends BasesView {
 			laneProperty ? (entry) => textValueOf(entry, laneProperty) : null,
 		);
 
-		// The candidate properties and their values both come from every entry
-		// the query returned, not the (possibly already filtered) lanes, so
+		// The property comes from the view's own settings (Filter by list
+		// property, next to Card Detail); its values come from every entry the
+		// query returned, not the (possibly already filtered) lanes, so
 		// narrowing the filter never shrinks what it can be widened back to.
-		// Candidates come from every property the dataset has, not just the
-		// ones toggled visible on the board: a property can hold a real list
-		// worth filtering by without being one of the chips shown on a card.
 		const allEntries = this.data.data;
-		let filterableProperties: BasesPropertyId[] = [];
-		// TEMPORARY: diagnosing why no property is being detected as a list on
-		// a real vault where one clearly should be. console.error rather than
-		// .debug, since nothing printed last time and errors can't be filtered
-		// out by the console's log-level setting; wrapped so a throw here
-		// can't silently take the rest of the render down with it.
-		try {
-			const candidateProperties = [...new Set([...properties, ...this.allProperties])];
-			filterableProperties = listProperties(candidateProperties, allEntries);
-			console.error("PM-Board list filter diagnostics", {
-				visibleProperties: properties,
-				allProperties: this.allProperties,
-				entryCount: allEntries.length,
-				filterableProperties,
-				sample: candidateProperties.map((property) => {
-					const first = allEntries.find((entry) => entry.getValue(property));
-					const value = first?.getValue(property);
-					return {
-						property,
-						constructorName: value?.constructor?.name ?? null,
-						isListValue: value instanceof ListValue,
-						text: value?.toString() ?? null,
-					};
-				}),
-			});
-		} catch (error) {
-			console.error("PM-Board list filter diagnostics threw", error);
-			new Notice("PM-Board: list filter diagnostics threw, see console");
-		}
 		if (config.listFilterProperty && config.listFilterValue) {
 			const property = config.listFilterProperty;
 			const value = config.listFilterValue;
@@ -216,8 +179,8 @@ export class BoardView extends BasesView {
 		this.lanes = lanes;
 		this.boardEl.empty();
 		this.boardEl.toggleClass("pmb-board-laned", lanes.length > 1 || laneProperty !== null);
-		if (filterableProperties.length > 0) {
-			this.renderListFilter(this.boardEl, config, filterableProperties, allEntries);
+		if (config.listFilterProperty) {
+			this.renderListFilter(this.boardEl, config, config.listFilterProperty, allEntries);
 		}
 		lanes.forEach((lane, laneIndex) => {
 			this.renderLane(this.boardEl as HTMLElement, lane, config, properties, laneIndex);
@@ -227,55 +190,23 @@ export class BoardView extends BasesView {
 	}
 
 	/**
-	 * The board's own header: pick a list-valued property, then one of its
-	 * values, to show only the cards carrying it. Both come from every entry
-	 * the query returned, so the choices on offer don't shrink once a filter
-	 * is already narrowing what's on screen. Buttons that open a Menu, the
-	 * same as every other control on the board, rather than a bare `<select>`.
+	 * The board's own header: once "Filter by list property" names a property
+	 * (set next to Card Detail, in the view's own settings — Bases has no way
+	 * to offer a dropdown of that property's own values there, since building
+	 * one needs the query's actual entries, not just the config), a button
+	 * here lists its distinct values to narrow the board to one. A Menu, the
+	 * same control every other part of the board already uses.
 	 */
 	private renderListFilter(
 		parentEl: HTMLElement,
 		config: BoardConfig,
-		properties: BasesPropertyId[],
+		property: BasesPropertyId,
 		entries: BasesEntry[],
 	): void {
+		const values = distinctListValues(entries, property);
+		if (values.length === 0) return;
+
 		const filterEl = parentEl.createDiv({ cls: "pmb-filter" });
-
-		const propertyBtn = this.filterButton(
-			filterEl,
-			config.listFilterProperty
-				? this.config.getDisplayName(config.listFilterProperty)
-				: "Filter",
-		);
-		this.registerDomEvent(propertyBtn, "click", (event) => {
-			const menu = new Menu();
-			menu.addItem((item) =>
-				item
-					.setTitle("No filter")
-					.setChecked(config.listFilterProperty === null)
-					.onClick(() => {
-						setListFilter(this.config, null, null);
-						if (!this.notifyConfigChanged()) this.onDataUpdated();
-					}),
-			);
-			menu.addSeparator();
-			for (const property of properties) {
-				menu.addItem((item) =>
-					item
-						.setTitle(this.config.getDisplayName(property))
-						.setChecked(property === config.listFilterProperty)
-						.onClick(() => {
-							setListFilter(this.config, property, null);
-							if (!this.notifyConfigChanged()) this.onDataUpdated();
-						}),
-				);
-			}
-			menu.showAtMouseEvent(event);
-		});
-
-		if (!config.listFilterProperty) return;
-		const property = config.listFilterProperty;
-
 		const valueBtn = this.filterButton(filterEl, config.listFilterValue ?? "All values");
 		this.registerDomEvent(valueBtn, "click", (event) => {
 			const menu = new Menu();
@@ -289,7 +220,7 @@ export class BoardView extends BasesView {
 					}),
 			);
 			menu.addSeparator();
-			for (const value of distinctListValues(entries, property)) {
+			for (const value of values) {
 				menu.addItem((item) =>
 					item
 						.setTitle(value)
@@ -1676,13 +1607,6 @@ function assign(frontmatter: Record<string, unknown>, key: string, value: unknow
 function textValueOf(entry: BasesEntry, property: BasesPropertyId): string | null {
 	const text = entry.getValue(property)?.toString().trim();
 	return text ? text : null;
-}
-
-/** Properties, among the given ones, that hold a list value on at least one entry. */
-function listProperties(properties: BasesPropertyId[], entries: BasesEntry[]): BasesPropertyId[] {
-	return properties.filter((property) =>
-		entries.some((entry) => entry.getValue(property) instanceof ListValue),
-	);
 }
 
 /** Every distinct value of a list property across entries, sorted for a stable menu. */

@@ -39,8 +39,9 @@ These are the things PM-Board sets out to do differently:
 - [x] Mobile layout
 - [x] Column header: add, rename, recolor, WIP limit, delete, drag to reorder
 - [x] Touch dragging on mobile: a still hold opens the card menu, a moving one drags the card
-- [x] Filter the board to one value of a list property (tags included), from a
-      select in the board's own header
+- [x] Filter the board to one value of a list property (tags included): the
+      property from the view's own settings, the value from a button in the
+      board's own header
 - [ ] Projects: a way to group cards by a property, above individual boards
 - [ ] Move board settings into the plugin's own settings tab, instead of
       hand-edited `.base` YAML
@@ -77,15 +78,22 @@ rather than to the column as a whole.
 
 ## Filtering
 
-When at least one of the board's visible properties holds a list value (`tags`
-included), the board's own header carries a select for it. Choosing a property
-adds a second select listing every distinct value it holds across the board;
-choosing one of those hides every card that doesn't carry it, in every lane
-and column, leaving the rest of the board otherwise unchanged. Both selects
-read "No filter" and "All" to show everything again.
+**Filter by list property**, next to Card Detail in the view's own settings,
+names a property (`tags` included) to filter the board on. Once set, a button
+appears in the board's own header listing every distinct value that property
+holds across the board; choosing one hides every card that doesn't carry it,
+in every lane and column, leaving the rest of the board otherwise unchanged.
+The button reads "All values" to show everything again.
 
-The choice is written to the board's own settings, the same as a collapsed
-column or a WIP limit, so it's still filtered the next time the board opens.
+The property lives in the view's settings because Bases can offer a plain
+property picker there; the value can't, since listing a property's own values
+needs the query's actual entries, which only reach the board itself — so that
+part is a button in the board's own header instead, the same Menu control
+used everywhere else on the board.
+
+Both the property and the chosen value are written to the board's own
+settings, the same as a collapsed column or a WIP limit, so the filter is
+still applied the next time the board opens.
 
 ## Keyboard
 
@@ -238,11 +246,14 @@ to a rendered, read-only preview with an **Open note** button instead.
   moving a card, there is no menu fallback yet; on a touch device or from
   the keyboard, a column's order can still be set by hand through
   `boardColumns`.
-- **Filtering by a list property is unverified in a vault.** The property and
-  value pickers, and which cards a chosen value hides, are covered by tests
-  through `filterLanes`, but the two selects themselves — populating them,
-  writing the choice back, restoring it on reopen — have not been exercised
-  outside those tests.
+- **Filtering by a list property is unverified in a vault.** Which cards a
+  chosen value hides is covered by tests through `filterLanes`, but the
+  property setting and the value button itself — appearing, listing the
+  right values, writing the choice back, restoring it on reopen — have not
+  been exercised outside those tests. An earlier attempt at this put both
+  the property and the value in the board's own header; the property picker
+  never rendered there for reasons that resisted diagnosis even with console
+  logging, which is why it now goes through the view's own settings instead.
 - **Sort by taking over card order is unverified in a vault.** The wiring
   is small (`getSort().length > 0` gates a couple of code paths), but
   `getSort()`'s exact behavior — whether it reflects a change immediately,
