@@ -264,15 +264,18 @@ Modifier keys always win over the setting, matching the rest of Obsidian:
 Ctrl/Cmd-click opens a new tab, and Ctrl/Cmd-Alt-click opens a split.
 
 **On desktop**, the floating modal is a compact task editor built from a
-design handoff, not the raw note: a title, a description (the note's body,
-minus its frontmatter, in a plain text field), and a bottom toolbar of
-property pills — project, due date (a fixed `due` property, not one you
-configure), tags, and priority — each editable in place. Due date and
-priority pills disappear entirely once unset, same as on the card itself;
-the toolbar's leading `+` is how either comes back. Every edit writes
+design handoff, not the raw note: a fixed-height (450px) panel with a
+title, a description (the note's body, minus its frontmatter, in a plain
+text field that fills the remaining space), and a bottom toolbar of
+property pills — Project, Due (a fixed `due` property, not one you
+configure), Tags, and Priority — each editable in place. All four labels
+always show, even with nothing set yet (shown muted until a value is
+picked), rather than appearing only once a value exists. Every edit writes
 straight to the note's frontmatter or body, the same as the card's own
-context menu actions elsewhere on the board. Only the mobile version of this
-same floating still has to be designed.
+context menu actions elsewhere on the board. The panel has no close or
+submit button of its own; Escape or clicking outside it, Obsidian's own
+modal behaviour, is how it closes. Only the mobile version of this same
+floating still has to be designed.
 
 **On mobile**, the floating modal instead hosts a live, editable pane,
 properties widget included, the same as opening the note anywhere else. It

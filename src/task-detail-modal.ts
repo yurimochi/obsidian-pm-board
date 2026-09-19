@@ -1,4 +1,4 @@
-import { App, Menu, Modal, Notice, setIcon, TFile } from "obsidian";
+import { App, Menu, Modal, Notice, parseYaml, setIcon, TFile } from "obsidian";
 import { BoardConfig } from "./board-config";
 import { HIDDEN_TAG } from "./card";
 import { frontmatterKeyOf } from "./frontmatter";
@@ -12,6 +12,32 @@ const DUE_PROPERTY = "due";
 /** A frontmatter value as display text, or "" for anything that isn't already text-shaped. */
 function textOf(value: unknown): string {
 	return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+}
+
+interface SplitContent {
+	/** The raw frontmatter block, delimiters included, or "" when there is none. */
+	head: string;
+	frontmatter: Record<string, unknown>;
+	/** Everything after the frontmatter block. */
+	body: string;
+}
+
+/**
+ * Parsed straight from freshly-read file content rather than
+ * `metadataCache.getFileCache`, whose cache can still be stale for a note
+ * only just created (e.g. right after this same view wrote its frontmatter)
+ * — reading it here showed the raw `---\n...\n---` block dumped into the
+ * description field, since a stale cache reports no frontmatter at all.
+ */
+function splitFrontmatter(content: string): SplitContent {
+	const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(content);
+	if (!match) return { head: "", frontmatter: {}, body: content };
+	const parsed: unknown = parseYaml(match[1]);
+	const frontmatter =
+		typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+			? (parsed as Record<string, unknown>)
+			: {};
+	return { head: match[0], frontmatter, body: content.slice(match[0].length) };
 }
 
 /**
@@ -32,7 +58,6 @@ export class TaskDetailModal extends Modal {
 	private frontmatter: Record<string, unknown> = {};
 	private originalTitle = "";
 	private originalDescription = "";
-	private frontmatterEnd: number | null = null;
 
 	constructor(
 		app: App,
@@ -48,14 +73,10 @@ export class TaskDetailModal extends Modal {
 	async onOpen(): Promise<void> {
 		this.contentEl.empty();
 		const content = await this.app.vault.read(this.file);
-		const cache = this.app.metadataCache.getFileCache(this.file);
-		this.frontmatterEnd = cache?.frontmatterPosition?.end.offset ?? null;
-		this.frontmatter = { ...(cache?.frontmatter ?? {}) };
+		const { frontmatter, body } = splitFrontmatter(content);
+		this.frontmatter = frontmatter;
 		this.originalTitle = this.file.basename;
-		this.originalDescription =
-			this.frontmatterEnd === null
-				? content.trim()
-				: content.slice(this.frontmatterEnd).trim();
+		this.originalDescription = body.trim();
 
 		this.renderTitle();
 		this.renderDescription();
@@ -116,11 +137,12 @@ export class TaskDetailModal extends Modal {
 		if (next === this.originalDescription) return;
 		try {
 			const content = await this.app.vault.read(this.file);
-			const head =
-				this.frontmatterEnd === null
-					? ""
-					: content.slice(0, this.frontmatterEnd).replace(/\s+$/, "");
-			await this.app.vault.modify(this.file, head ? `${head}\n\n${next}\n` : `${next}\n`);
+			const { head } = splitFrontmatter(content);
+			const cleanHead = head.replace(/\s+$/, "");
+			await this.app.vault.modify(
+				this.file,
+				cleanHead ? `${cleanHead}\n\n${next}\n` : `${next}\n`,
+			);
 			this.originalDescription = next;
 		} catch (error) {
 			console.error("PM-Board: could not update the description.", error);
@@ -129,46 +151,28 @@ export class TaskDetailModal extends Modal {
 	}
 
 	private renderToolbar(): void {
-		const rowEl = this.contentEl.createDiv({ cls: "pmb-td-toolbar" });
-		this.toolbarLeftEl = rowEl.createDiv({ cls: "pmb-td-toolbar-left" });
+		this.toolbarLeftEl = this.contentEl.createDiv({ cls: "pmb-td-toolbar" });
 		this.renderToolbarLeft();
-
-		const rightEl = rowEl.createDiv({ cls: "pmb-td-toolbar-right" });
-		const closeEl = rightEl.createSpan({ cls: "pmb-td-icon-btn" });
-		setIcon(closeEl, "lucide-x");
-		closeEl.addEventListener("click", () => this.close());
-
-		// No destination in the design handoff either; a visual placeholder only.
-		const submitEl = rightEl.createSpan({ cls: "pmb-td-submit" });
-		setIcon(submitEl, "lucide-arrow-up");
 	}
 
 	private renderToolbarLeft(): void {
 		this.toolbarLeftEl.empty();
 
-		const addEl = this.toolbarLeftEl.createSpan({ cls: "pmb-td-icon-btn" });
-		setIcon(addEl, "lucide-plus");
-		addEl.addEventListener("click", (event: MouseEvent) => this.showAddFieldMenu(event));
-
-		if (this.config.projectProperty) this.renderProjectPill();
+		this.renderProjectPill();
 		this.renderDuePill();
-
-		const tagsIconEl = this.toolbarLeftEl.createSpan({ cls: "pmb-td-icon-btn" });
-		setIcon(tagsIconEl, "lucide-tags");
-		tagsIconEl.addEventListener("click", () => void this.editTags());
-
-		this.renderTagPills();
-
-		if (this.config.priorityProperty) this.renderPriorityPill();
+		this.renderTagsPill();
+		this.renderPriorityPill();
 	}
 
 	private renderProjectPill(): void {
-		const key = frontmatterKeyOf(this.config.projectProperty as string);
+		const key = this.config.projectProperty
+			? frontmatterKeyOf(this.config.projectProperty)
+			: null;
 		if (!key) return;
-		const raw = this.frontmatter[key];
-		const value = typeof raw === "string" ? raw.trim() : "";
+		const value = textOf(this.frontmatter[key]);
 
 		const pillEl = this.toolbarLeftEl.createDiv({ cls: "pmb-td-pill" });
+		pillEl.toggleClass("pmb-td-pill-empty", !value);
 		setIcon(pillEl.createSpan({ cls: "pmb-td-pill-icon" }), "lucide-folder");
 		pillEl.createSpan({ cls: "pmb-td-pill-label", text: value || "Project" });
 		pillEl.addEventListener("click", () => void this.promptProject(key, value));
@@ -193,18 +197,17 @@ export class TaskDetailModal extends Modal {
 
 	private renderDuePill(): void {
 		const value = textOf(this.frontmatter[DUE_PROPERTY]);
-		if (!value) return;
 
-		const pillEl = this.toolbarLeftEl.createDiv({ cls: "pmb-td-pill pmb-td-pill-accent" });
-		setIcon(
-			pillEl.createSpan({ cls: "pmb-td-pill-icon pmb-td-pill-icon-accent" }),
-			"lucide-calendar",
-		);
-		const labelEl = pillEl.createSpan({
-			cls: "pmb-td-pill-label pmb-td-pill-label-accent",
-			text: value,
-		});
+		const pillEl = this.toolbarLeftEl.createDiv({ cls: "pmb-td-pill" });
+		pillEl.toggleClass("pmb-td-pill-empty", !value);
+		const iconEl = pillEl.createSpan({ cls: "pmb-td-pill-icon" });
+		iconEl.toggleClass("pmb-td-pill-icon-accent", !!value);
+		setIcon(iconEl, "lucide-calendar");
+		const labelEl = pillEl.createSpan({ cls: "pmb-td-pill-label", text: value || "Due" });
+		labelEl.toggleClass("pmb-td-pill-label-accent", !!value);
 		labelEl.addEventListener("click", () => void this.promptDue(value));
+
+		if (!value) return;
 		const clearEl = pillEl.createSpan({ cls: "pmb-td-pill-clear" });
 		setIcon(clearEl, "lucide-x");
 		clearEl.addEventListener("click", (event: MouseEvent) => {
@@ -235,15 +238,20 @@ export class TaskDetailModal extends Modal {
 		this.renderToolbarLeft();
 	}
 
-	private renderTagPills(): void {
+	private renderTagsPill(): void {
+		const pillEl = this.toolbarLeftEl.createDiv({ cls: "pmb-td-pill" });
+		setIcon(pillEl.createSpan({ cls: "pmb-td-pill-icon" }), "lucide-tags");
+		pillEl.createSpan({ cls: "pmb-td-pill-label", text: "Tags" });
+		pillEl.addEventListener("click", () => void this.editTags());
+
 		const tags = parseTagList(this.frontmatter.tags).filter(
 			(tag) => tag.toLowerCase() !== HIDDEN_TAG,
 		);
 		for (const tag of tags) {
-			const pillEl = this.toolbarLeftEl.createDiv({ cls: "pmb-td-tag" });
+			const tagEl = this.toolbarLeftEl.createDiv({ cls: "pmb-td-tag" });
 			const color = this.config.tagColors.get(tag);
-			if (color) pillEl.style.setProperty("--pmb-td-tag-color", color);
-			pillEl.createSpan({ text: tag });
+			if (color) tagEl.style.setProperty("--pmb-td-tag-color", color);
+			tagEl.createSpan({ text: tag });
 		}
 	}
 
@@ -265,21 +273,28 @@ export class TaskDetailModal extends Modal {
 	}
 
 	private renderPriorityPill(): void {
-		const key = frontmatterKeyOf(this.config.priorityProperty as string);
+		const key = this.config.priorityProperty
+			? frontmatterKeyOf(this.config.priorityProperty)
+			: null;
 		if (!key) return;
 		const priority = this.priorityAt(key);
-		if (!priority) return;
 
 		const pillEl = this.toolbarLeftEl.createDiv({ cls: "pmb-td-pill" });
-		pillEl.style.setProperty(
-			"--pmb-td-priority-color",
-			`var(--pmb-td-priority-${priority.toLowerCase()})`,
-		);
-		setIcon(
-			pillEl.createSpan({ cls: "pmb-td-pill-icon pmb-td-pill-icon-priority" }),
-			"lucide-flag",
-		);
-		pillEl.createSpan({ cls: "pmb-td-pill-label pmb-td-pill-label-priority", text: priority });
+		pillEl.toggleClass("pmb-td-pill-empty", !priority);
+		if (priority) {
+			pillEl.style.setProperty(
+				"--pmb-td-priority-color",
+				`var(--pmb-td-priority-${priority.toLowerCase()})`,
+			);
+		}
+		const iconEl = pillEl.createSpan({ cls: "pmb-td-pill-icon" });
+		iconEl.toggleClass("pmb-td-pill-icon-priority", !!priority);
+		setIcon(iconEl, "lucide-flag");
+		const labelEl = pillEl.createSpan({
+			cls: "pmb-td-pill-label",
+			text: priority ?? "Priority",
+		});
+		labelEl.toggleClass("pmb-td-pill-label-priority", !!priority);
 		pillEl.addEventListener("click", (event: MouseEvent) => this.showPriorityMenu(event, key));
 	}
 
@@ -315,43 +330,6 @@ export class TaskDetailModal extends Modal {
 		if (label) this.frontmatter[key] = label;
 		else delete this.frontmatter[key];
 		this.renderToolbarLeft();
-	}
-
-	/**
-	 * Due date and priority pills disappear entirely once unset, so this is
-	 * the only way back in for either; project and tags keep their own
-	 * always-present controls and don't need it.
-	 */
-	private showAddFieldMenu(event: MouseEvent): void {
-		const dueSet = !!textOf(this.frontmatter[DUE_PROPERTY]);
-		const priorityKey = this.config.priorityProperty
-			? frontmatterKeyOf(this.config.priorityProperty)
-			: null;
-		const prioritySet = !!(priorityKey && this.priorityAt(priorityKey));
-
-		const menu = new Menu();
-		let hasItem = false;
-		if (!dueSet) {
-			hasItem = true;
-			menu.addItem((item) =>
-				item
-					.setTitle("Set due date")
-					.setIcon("lucide-calendar")
-					.onClick(() => void this.promptDue("")),
-			);
-		}
-		if (priorityKey && !prioritySet) {
-			hasItem = true;
-			const key = priorityKey;
-			menu.addItem((item) =>
-				item
-					.setTitle("Set priority")
-					.setIcon("lucide-flag")
-					.onClick(() => this.showPriorityMenu(event, key)),
-			);
-		}
-		if (!hasItem) return;
-		menu.showAtMouseEvent(event);
 	}
 
 	private async writeFrontmatter(
