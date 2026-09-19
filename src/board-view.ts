@@ -106,6 +106,8 @@ export class BoardView extends BasesView {
 	private pendingFocus: string | null = null;
 	/** Card that currently holds the board's single tab stop. */
 	private activePath: string | null = null;
+	/** Whether the header's filter panel is open; survives a redraw so picking a property doesn't close it. */
+	private filterPanelOpen = false;
 	private readonly renderContext: RenderContext = { hoverPopover: null };
 
 	constructor(
@@ -127,6 +129,16 @@ export class BoardView extends BasesView {
 			if (!card?.dataset.path) return;
 			this.activePath = card.dataset.path;
 			this.updateTabStops();
+		});
+
+		// One listener for the view's whole life, gated by the flag, rather than
+		// attaching and detaching one each time the panel opens and closes.
+		this.registerDomEvent(document, "click", (event) => {
+			if (!this.filterPanelOpen) return;
+			const target = event.target as HTMLElement;
+			if (target.closest(".pmb-filter")) return;
+			this.filterPanelOpen = false;
+			this.onDataUpdated();
 		});
 	}
 
@@ -197,10 +209,14 @@ export class BoardView extends BasesView {
 	}
 
 	/**
-	 * The board's own header: box 1 picks a property, box 2 (once box 1 names
-	 * one) lists its distinct values, and picking one of those filters the
-	 * board to it. Both are buttons that open a Menu, the same control every
-	 * other part of the board already uses, rather than a bare `<select>`.
+	 * The board's own header: a single funnel icon opens a panel with two
+	 * always-visible sections — Property (every property the query has,
+	 * tags included) and Filtering (once a property is picked, its distinct
+	 * values). Picking a property narrows the board to it with no value yet
+	 * (equivalent to "All"); picking a value commits it and closes the
+	 * panel. The panel survives the redraw either of those triggers, via
+	 * `filterPanelOpen`, so picking a property doesn't close it before
+	 * Filtering's values even show.
 	 */
 	private renderFilterBar(
 		parentEl: HTMLElement,
@@ -210,76 +226,90 @@ export class BoardView extends BasesView {
 	): void {
 		const filterEl = parentEl.createDiv({ cls: "pmb-filter" });
 
-		const propertyBtn = this.filterButton(
-			filterEl,
-			config.listFilterProperty
-				? this.config.getDisplayName(config.listFilterProperty)
-				: "Filter",
-		);
-		this.registerDomEvent(propertyBtn, "click", (event) => {
-			const menu = new Menu();
-			menu.addItem((item) =>
-				item
-					.setTitle("No filter")
-					.setChecked(config.listFilterProperty === null)
-					.onClick(() => {
-						setListFilter(this.config, null, null);
-						if (!this.notifyConfigChanged()) this.onDataUpdated();
-					}),
-			);
-			menu.addSeparator();
-			for (const property of properties) {
-				menu.addItem((item) =>
-					item
-						.setTitle(this.config.getDisplayName(property))
-						.setChecked(property === config.listFilterProperty)
-						.onClick(() => {
-							setListFilter(this.config, property, null);
-							if (!this.notifyConfigChanged()) this.onDataUpdated();
-						}),
-				);
-			}
-			menu.showAtMouseEvent(event);
+		const triggerBtn = filterEl.createEl("button", { cls: "pmb-filter-icon-btn" });
+		setIcon(triggerBtn, "lucide-filter");
+		this.registerDomEvent(triggerBtn, "click", () => {
+			this.filterPanelOpen = !this.filterPanelOpen;
+			this.onDataUpdated();
 		});
 
-		if (!config.listFilterProperty) return;
+		if (!this.filterPanelOpen) return;
+		const panelEl = filterEl.createDiv({ cls: "pmb-filter-panel" });
+
 		const property = config.listFilterProperty;
-		const values = distinctListValues(entries, property);
-		if (values.length === 0) return;
+		this.renderFilterPanelSection(
+			panelEl,
+			"lucide-folder",
+			"Property",
+			property ? this.config.getDisplayName(property) : "None",
+			properties.map((candidate) => ({
+				label: this.config.getDisplayName(candidate),
+				active: candidate === property,
+				onClick: () => {
+					setListFilter(this.config, candidate, null);
+					if (!this.notifyConfigChanged()) this.onDataUpdated();
+				},
+			})),
+		);
 
-		const valueBtn = this.filterButton(filterEl, config.listFilterValue ?? "All values");
-		this.registerDomEvent(valueBtn, "click", (event) => {
-			const menu = new Menu();
-			menu.addItem((item) =>
-				item
-					.setTitle("All values")
-					.setChecked(config.listFilterValue === null)
-					.onClick(() => {
-						setListFilter(this.config, property, null);
-						if (!this.notifyConfigChanged()) this.onDataUpdated();
-					}),
-			);
-			menu.addSeparator();
-			for (const value of values) {
-				menu.addItem((item) =>
-					item
-						.setTitle(value)
-						.setChecked(value === config.listFilterValue)
-						.onClick(() => {
-							setListFilter(this.config, property, value);
-							if (!this.notifyConfigChanged()) this.onDataUpdated();
-						}),
-				);
-			}
-			menu.showAtMouseEvent(event);
-		});
+		panelEl.createDiv({ cls: "pmb-filter-panel-divider" });
+
+		const values = property ? distinctListValues(entries, property) : [];
+		this.renderFilterPanelSection(
+			panelEl,
+			"lucide-filter",
+			"Filtering",
+			config.listFilterValue ?? "All",
+			!property
+				? []
+				: [
+						{
+							label: "All",
+							active: config.listFilterValue === null,
+							onClick: () => {
+								setListFilter(this.config, property, null);
+								this.filterPanelOpen = false;
+								if (!this.notifyConfigChanged()) this.onDataUpdated();
+							},
+						},
+						...values.map((value) => ({
+							label: value,
+							active: value === config.listFilterValue,
+							onClick: () => {
+								setListFilter(this.config, property, value);
+								this.filterPanelOpen = false;
+								if (!this.notifyConfigChanged()) this.onDataUpdated();
+							},
+						})),
+					],
+		);
 	}
 
-	private filterButton(parentEl: HTMLElement, label: string): HTMLButtonElement {
-		const btn = parentEl.createEl("button", { cls: "pmb-filter-button" });
-		btn.createSpan({ text: label });
-		setIcon(btn.createSpan({ cls: "pmb-filter-chevron" }), "lucide-chevron-down");
-		return btn;
+	private renderFilterPanelSection(
+		parentEl: HTMLElement,
+		icon: string,
+		label: string,
+		currentValue: string,
+		items: { label: string; active: boolean; onClick: () => void }[],
+	): void {
+		const sectionEl = parentEl.createDiv({ cls: "pmb-filter-panel-section" });
+
+		const headerEl = sectionEl.createDiv({ cls: "pmb-filter-panel-header" });
+		setIcon(headerEl.createSpan({ cls: "pmb-filter-panel-header-icon" }), icon);
+		headerEl.createSpan({ cls: "pmb-filter-panel-header-label", text: label });
+		headerEl.createSpan({ cls: "pmb-filter-panel-header-value", text: currentValue });
+		setIcon(
+			headerEl.createSpan({ cls: "pmb-filter-panel-header-chevron" }),
+			"lucide-chevron-right",
+		);
+
+		for (const item of items) {
+			const itemEl = sectionEl.createDiv({ cls: "pmb-filter-panel-item" });
+			itemEl.toggleClass("pmb-filter-panel-item-active", item.active);
+			itemEl.createSpan({ text: item.label });
+			if (item.active) setIcon(itemEl.createSpan(), "lucide-check");
+			this.registerDomEvent(itemEl, "click", item.onClick);
+		}
 	}
 
 	/**

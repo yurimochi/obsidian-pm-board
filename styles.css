@@ -53,6 +53,7 @@
 }
 
 .pmb-filter {
+	position: relative;
 	display: flex;
 	flex-shrink: 0;
 	align-items: center;
@@ -60,28 +61,114 @@
 	gap: 12px;
 }
 
-.pmb-filter-button {
+.pmb-filter-icon-btn {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 8px 16px;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
 	background-color: var(--pmb-surface);
 	border: 1px solid var(--pmb-border);
 	border-radius: var(--pmb-radius-m);
 	color: var(--pmb-text);
-	font: inherit;
-	font-size: 12px;
-	font-weight: 600;
 	cursor: pointer;
 }
 
-.pmb-filter-button:hover {
+.pmb-filter-icon-btn:hover {
 	border-color: var(--pmb-border-hover);
 }
 
-.pmb-filter-chevron {
+/* Anchored under the trigger button rather than a native Menu, since both
+   sections (and Filtering's values) need to stay visible and update live
+   as the other section is picked, not collapse into a hover submenu. */
+.pmb-filter-panel {
+	position: absolute;
+	top: calc(100% + 8px);
+	right: 0;
+	z-index: 50;
 	display: flex;
+	flex-direction: column;
+	min-width: 260px;
+	padding: 8px;
+	background-color: var(--pmb-dropdown-bg);
+	border: 1px solid var(--pmb-dropdown-border);
+	border-radius: 16px;
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.pmb-filter-panel-section {
+	display: flex;
+	flex-direction: column;
+}
+
+.pmb-filter-panel-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	color: var(--pmb-text);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.pmb-filter-panel-header-icon {
+	display: flex;
+	flex: 0 0 auto;
+	width: 16px;
+	height: 16px;
 	color: var(--pmb-text-muted-1);
+}
+
+.pmb-filter-panel-header-label {
+	flex: 1;
+}
+
+.pmb-filter-panel-header-value {
+	color: var(--pmb-text-muted-2);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.pmb-filter-panel-header-chevron {
+	display: flex;
+	flex: 0 0 auto;
+	width: 14px;
+	height: 14px;
+	color: var(--pmb-text-muted-2);
+}
+
+.pmb-filter-panel-divider {
+	height: 1px;
+	margin: 4px 0;
+	background-color: var(--pmb-dropdown-border);
+}
+
+.pmb-filter-panel-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px 8px 36px;
+	border-radius: 8px;
+	color: var(--pmb-text);
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.pmb-filter-panel-item:hover {
+	background-color: var(--pmb-dropdown-hover);
+}
+
+.pmb-filter-panel-item span:first-child {
+	flex: 1;
+}
+
+.pmb-filter-panel-item-active {
+	color: var(--pmb-accent);
+}
+
+.pmb-filter-panel-item-active svg {
+	width: 14px;
+	height: 14px;
 }
 
 .pmb-lane {

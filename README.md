@@ -57,12 +57,15 @@ rather than to the column as a whole.
 
 ## Filtering
 
-Two buttons in the board's own header. The first lists every property the
-query has, tags included; picking one adds the second, listing every
-distinct value that property holds across the board. Picking one of those
-hides every card that doesn't carry it, in every lane and column, leaving the
-rest of the board otherwise unchanged. Both buttons read "No filter" and
-"All values" to show everything again.
+A funnel icon in the board's own header opens a panel with two sections:
+**Property** lists every property the query has, tags included; picking
+one narrows nothing yet on its own, but reveals **Filtering** below it —
+every distinct value that property holds across the board, "All" first.
+Picking one of those hides every card that doesn't carry it, in every lane
+and column, and closes the panel; "All" closes it too, showing everything
+again. The panel stays open across a property pick, though, so its values
+show up in the same place rather than requiring it be reopened, and closes
+on an outside click.
 
 Both the property and the chosen value are written to the board's own
 settings, the same as a collapsed column or a WIP limit, so the filter is
