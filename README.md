@@ -89,8 +89,9 @@ also carries its own date, since the column itself no longer names one.
 The board's colours are fixed, not derived from the installed Obsidian
 theme: a light and a dark palette baked into the plugin, switching with
 Obsidian's own light/dark appearance setting rather than a community theme's
-variables. The one exception is the card detail and rename/tag-edit modals,
-which still follow Obsidian's native modal styling.
+variables. The desktop task-detail floating (see **Card detail** below) has
+its own such palette too; the rename/tag-edit prompts and mobile's live-leaf
+card detail still follow Obsidian's native modal styling.
 
 ### Priority
 
@@ -255,18 +256,29 @@ card does:
 | Setting | Effect |
 | --- | --- |
 | Active pane / tab | Replaces the tab the board is in (default) |
-| Floating modal | Opens the note, live and editable, in a modal over the board |
+| Floating modal | Opens a floating task editor over the board |
 | Split to the right | Opens the note in a new pane beside the board |
 | New tab | Opens the note in a new tab |
 
 Modifier keys always win over the setting, matching the rest of Obsidian:
 Ctrl/Cmd-click opens a new tab, and Ctrl/Cmd-Alt-click opens a split.
 
-The floating modal hosts a live, editable pane, properties widget included,
-the same as opening the note anywhere else. It builds a `WorkspaceSplit` and
-a `WorkspaceLeaf` outside the normal workspace tree, which the public API
-does not document a way to do; the wiring and the CSS that sizes it both
-adapt the technique the
+**On desktop**, the floating modal is a compact task editor built from a
+design handoff, not the raw note: a title, a description (the note's body,
+minus its frontmatter, in a plain text field), and a bottom toolbar of
+property pills — project, due date (a fixed `due` property, not one you
+configure), tags, and priority — each editable in place. Due date and
+priority pills disappear entirely once unset, same as on the card itself;
+the toolbar's leading `+` is how either comes back. Every edit writes
+straight to the note's frontmatter or body, the same as the card's own
+context menu actions elsewhere on the board. Only the mobile version of this
+same floating still has to be designed.
+
+**On mobile**, the floating modal instead hosts a live, editable pane,
+properties widget included, the same as opening the note anywhere else. It
+builds a `WorkspaceSplit` and a `WorkspaceLeaf` outside the normal workspace
+tree, which the public API does not document a way to do; the wiring and
+the CSS that sizes it both adapt the technique the
 [Hover Editor](https://github.com/nothingislost/obsidian-hover-editor)
 community plugin uses for its own floating panes, an unrelated project used
 here only as a reference for this one undocumented mechanism, not for any

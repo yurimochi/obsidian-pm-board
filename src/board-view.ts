@@ -66,6 +66,7 @@ import {
 } from "./swimlanes";
 import { applyPlaceholders, joinPath, uniqueName } from "./template";
 import { parseTagList } from "./tag-colors";
+import { TaskDetailModal } from "./task-detail-modal";
 
 /** How long a still touch is held before it counts as a long press, opening the card menu. */
 const TOUCH_LONG_PRESS_MS = 450;
@@ -1077,9 +1078,16 @@ export class BoardView extends BasesView {
 			// close, not on open: a live leaf can redraw the board while still
 			// open too, which would consume this early and miss the redraw that
 			// actually matters.
-			new CardDetailModal(this.app, file, () => {
+			const onDismiss = (): void => {
 				this.pendingFocus = file.path;
-			}).open();
+			};
+			// The floating task editor has a design only for desktop so far;
+			// mobile keeps the live-leaf modal until it gets one of its own.
+			if (Platform.isMobile) {
+				new CardDetailModal(this.app, file, onDismiss).open();
+			} else {
+				new TaskDetailModal(this.app, file, config, onDismiss).open();
+			}
 			return;
 		}
 		await this.app.workspace.getLeaf(target).openFile(file);

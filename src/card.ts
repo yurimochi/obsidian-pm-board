@@ -19,7 +19,7 @@ const TAGS_PROPERTY = "file.tags";
  * Dropped from the card's own tag chips only; it still filters, and the
  * edit-tags prompt still reads and writes it normally.
  */
-const HIDDEN_TAG = "task";
+export const HIDDEN_TAG = "task";
 
 export interface RenderedCard {
 	cardEl: HTMLElement;

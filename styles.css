@@ -853,3 +853,212 @@
 	gap: var(--size-4-2);
 	margin-top: var(--size-4-3);
 }
+
+/* Desktop task-detail floating panel, from the design handoff. A fixed
+   light/dark palette of its own: like .pmb-board, this is meant to look the
+   same whatever Obsidian theme is installed, but it lives in a Modal
+   outside the board's own DOM, so it cannot just inherit --pmb-* from
+   .pmb-board and needs this small palette re-declared under its own names. */
+.pmb-task-detail {
+	--pmb-td-bg: #ffffff;
+	--pmb-td-pill-bg: #f0f0f0;
+	--pmb-td-pill-hover: #e2e2e2;
+	--pmb-td-border: #e2e2e2;
+	--pmb-td-text: #1a1a1a;
+	--pmb-td-description: #5a5a5a;
+	--pmb-td-icon: #6a6a6a;
+	--pmb-td-accent: #e2735a;
+	--pmb-td-priority-p1: #e2735a;
+	--pmb-td-priority-p2: #f97316;
+	--pmb-td-priority-p3: #eab308;
+	--pmb-td-priority-p4: #9a9a9a;
+}
+
+.theme-dark .pmb-task-detail {
+	--pmb-td-bg: #1c1c1c;
+	--pmb-td-pill-bg: #2a2a2a;
+	--pmb-td-pill-hover: #333333;
+	--pmb-td-border: transparent;
+	--pmb-td-text: #f2f2f2;
+	--pmb-td-description: #c9c9c9;
+	--pmb-td-icon: #9a9a9a;
+}
+
+.pmb-task-detail.modal {
+	width: 640px;
+	max-width: 90vw;
+	background-color: var(--pmb-td-bg);
+	border: 1px solid var(--pmb-td-border);
+	border-radius: 16px;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.pmb-task-detail .modal-content {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 18px 18px 14px;
+}
+
+.pmb-td-title {
+	background: transparent;
+	border: none;
+	outline: none;
+	color: var(--pmb-td-text);
+	font-size: 20px;
+	font-weight: 600;
+	padding: 4px 6px;
+}
+
+.pmb-td-description {
+	background: transparent;
+	border: none;
+	outline: none;
+	resize: none;
+	color: var(--pmb-td-description);
+	font-size: 14px;
+	line-height: 1.5;
+	padding: 4px 6px;
+	min-height: 80px;
+	font-family: inherit;
+}
+
+.pmb-td-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.pmb-td-toolbar-left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.pmb-td-toolbar-right {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
+}
+
+.pmb-td-icon-btn {
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	background-color: var(--pmb-td-pill-bg);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--pmb-td-text);
+	cursor: pointer;
+}
+
+.pmb-td-icon-btn:hover {
+	background-color: var(--pmb-td-pill-hover);
+}
+
+.pmb-td-icon-btn svg {
+	width: 16px;
+	height: 16px;
+}
+
+.pmb-td-toolbar-right .pmb-td-icon-btn {
+	background-color: transparent;
+	color: var(--pmb-td-icon);
+}
+
+.pmb-td-toolbar-right .pmb-td-icon-btn:hover {
+	background-color: var(--pmb-td-pill-bg);
+}
+
+.pmb-td-submit {
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	background-color: var(--pmb-td-accent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.pmb-td-submit svg {
+	width: 16px;
+	height: 16px;
+	color: #ffffff;
+}
+
+.pmb-td-pill,
+.pmb-td-tag {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 36px;
+	border-radius: 10px;
+	background-color: var(--pmb-td-pill-bg);
+	padding: 0 12px;
+	box-sizing: border-box;
+	color: var(--pmb-td-text);
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.pmb-td-pill:hover {
+	background-color: var(--pmb-td-pill-hover);
+}
+
+.pmb-td-tag {
+	cursor: default;
+	color: var(--pmb-td-tag-color, var(--pmb-td-icon));
+}
+
+.pmb-td-pill-icon {
+	display: flex;
+	flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+	color: var(--pmb-td-icon);
+}
+
+.pmb-td-pill-icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.pmb-td-pill-accent {
+	gap: 8px;
+}
+
+.pmb-td-pill-icon-accent {
+	color: var(--pmb-td-accent);
+}
+
+.pmb-td-pill-label-accent {
+	color: var(--pmb-td-accent);
+	font-weight: 600;
+}
+
+.pmb-td-pill-icon-priority {
+	color: var(--pmb-td-priority-color, var(--pmb-td-accent));
+}
+
+.pmb-td-pill-label-priority {
+	color: var(--pmb-td-priority-color, var(--pmb-td-accent));
+	font-weight: 600;
+}
+
+.pmb-td-pill-clear {
+	display: flex;
+	flex-shrink: 0;
+	width: 13px;
+	height: 13px;
+	color: var(--pmb-td-icon);
+}
+
+.pmb-td-pill-clear svg {
+	width: 100%;
+	height: 100%;
+}
