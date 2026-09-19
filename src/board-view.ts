@@ -135,13 +135,22 @@ export class BoardView extends BasesView {
 
 		// One listener for the view's whole life, gated by the flag, rather than
 		// attaching and detaching one each time the panel opens and closes.
-		this.registerDomEvent(document, "click", (event) => {
-			if (!this.filterPanelOpen) return;
-			const target = event.target as HTMLElement;
-			if (target.closest(".pmb-filter")) return;
-			this.filterPanelOpen = false;
-			this.onDataUpdated();
-		});
+		// pointerdown rather than click: on mobile a tap can be consumed by
+		// scrolling or another element's own handler before a click ever
+		// reaches document, and capture phase runs ahead of anything a
+		// descendant might do with the event.
+		this.registerDomEvent(
+			document,
+			"pointerdown",
+			(event) => {
+				if (!this.filterPanelOpen) return;
+				const target = event.target as HTMLElement;
+				if (target.closest(".pmb-filter")) return;
+				this.filterPanelOpen = false;
+				this.onDataUpdated();
+			},
+			{ capture: true },
+		);
 	}
 
 	onunload(): void {
