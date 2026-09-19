@@ -15,6 +15,7 @@
 	--pmb-dropdown-bg: #ffffff;
 	--pmb-dropdown-border: oklch(0.88 0.005 260);
 	--pmb-dropdown-hover: oklch(0.92 0.005 260);
+	--pmb-dropdown-row-hover: oklch(0.9 0.005 260);
 	--pmb-accent: #e2735a;
 	--pmb-status-idle: #5a5a5a;
 	--pmb-priority-p1: #e2735a;
@@ -47,9 +48,10 @@
 	--pmb-text-muted-1: #9a9a9a;
 	--pmb-text-muted-2: #7a7a7a;
 	--pmb-text-muted-3: #6f6f6f;
-	--pmb-dropdown-bg: oklch(0.24 0.005 260);
+	--pmb-dropdown-bg: oklch(0.2 0.005 260);
 	--pmb-dropdown-border: oklch(0.32 0.005 260);
 	--pmb-dropdown-hover: oklch(0.3 0.005 260);
+	--pmb-dropdown-row-hover: oklch(0.26 0.005 260);
 }
 
 .pmb-filter {
@@ -61,21 +63,77 @@
 	gap: 12px;
 }
 
+/* Flat surface by default; .theme-dark below replaces this with the
+   glassmorphic treatment the design specifies — a backdrop blur only
+   reads over a non-flat, sufficiently dark background, which the light
+   palette isn't. */
 .pmb-filter-icon-btn {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	width: 36px;
-	height: 36px;
+	justify-content: space-between;
+	gap: 18px;
+	padding: 10px 18px;
 	background-color: var(--pmb-surface);
 	border: 1px solid var(--pmb-border);
-	border-radius: var(--pmb-radius-m);
+	border-radius: 999px;
 	color: var(--pmb-text);
 	cursor: pointer;
 }
 
 .pmb-filter-icon-btn:hover {
 	border-color: var(--pmb-border-hover);
+}
+
+.theme-dark .pmb-filter-icon-btn {
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02));
+	backdrop-filter: blur(16px) saturate(160%);
+	-webkit-backdrop-filter: blur(16px) saturate(160%);
+	border: none;
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.16),
+		inset 0 -1px 6px rgba(0, 0, 0, 0.35);
+}
+
+.theme-dark .pmb-filter-icon-btn:hover {
+	border-color: transparent;
+}
+
+.pmb-filter-icon-wrap {
+	position: relative;
+	display: flex;
+	width: 16px;
+	height: 16px;
+}
+
+.pmb-filter-icon-wrap svg {
+	width: 100%;
+	height: 100%;
+}
+
+/* Shown only once a property AND a specific value (not "All") are both
+   set — an unfiltered or "All" state gets no badge. */
+.pmb-filter-icon-badge {
+	position: absolute;
+	top: -2px;
+	right: -4px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background-color: var(--pmb-text);
+}
+
+/* A static visual, no assigned action yet — left undecided by design. */
+.pmb-filter-icon-dots {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.pmb-filter-icon-dot {
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background-color: var(--pmb-text);
 }
 
 /* Anchored under the trigger button rather than a native Menu, since both
@@ -88,12 +146,12 @@
 	z-index: 50;
 	display: flex;
 	flex-direction: column;
-	min-width: 260px;
-	padding: 8px;
+	width: 260px;
 	background-color: var(--pmb-dropdown-bg);
 	border: 1px solid var(--pmb-dropdown-border);
-	border-radius: 16px;
-	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+	border-radius: 14px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	overflow: hidden;
 }
 
 .pmb-filter-panel-section {
@@ -104,24 +162,38 @@
 .pmb-filter-panel-header {
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
 	gap: 8px;
-	padding: 8px 12px;
-	border-radius: 8px;
+	padding: 14px 16px;
 	color: var(--pmb-text);
-	font-size: 14px;
-	font-weight: 600;
 	cursor: pointer;
 }
 
 .pmb-filter-panel-header:hover {
-	background-color: var(--pmb-dropdown-hover);
+	background-color: var(--pmb-dropdown-row-hover);
+}
+
+.pmb-filter-panel-header-left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.pmb-filter-panel-header-right {
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 /* A fixed height (not max-height) so both sections' headers stay put
    whether the list under one of them is short or long enough to scroll,
    rather than the panel growing with however many properties there are. */
 .pmb-filter-panel-items {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
 	height: 200px;
+	padding: 4px 6px 8px;
 	overflow-y: auto;
 }
 
@@ -134,13 +206,12 @@
 }
 
 .pmb-filter-panel-header-label {
-	flex: 1;
+	font-size: 13px;
 }
 
 .pmb-filter-panel-header-value {
-	color: var(--pmb-text-muted-2);
+	color: var(--pmb-text-muted-1);
 	font-size: 13px;
-	font-weight: 500;
 }
 
 .pmb-filter-panel-header-chevron {
@@ -153,18 +224,18 @@
 
 .pmb-filter-panel-divider {
 	height: 1px;
-	margin: 4px 0;
-	background-color: var(--pmb-dropdown-border);
+	margin: 0 16px;
+	background-color: var(--pmb-dropdown-hover);
 }
 
 .pmb-filter-panel-item {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 8px 12px 8px 36px;
-	border-radius: 8px;
+	justify-content: space-between;
+	padding: 8px 8px 8px 38px;
+	border-radius: 6px;
 	color: var(--pmb-text);
-	font-size: 14px;
+	font-size: 12px;
 	cursor: pointer;
 }
 
@@ -172,17 +243,13 @@
 	background-color: var(--pmb-dropdown-hover);
 }
 
-.pmb-filter-panel-item span:first-child {
-	flex: 1;
-}
-
 .pmb-filter-panel-item-active {
 	color: var(--pmb-accent);
+	font-weight: 700;
 }
 
-.pmb-filter-panel-item-active svg {
-	width: 14px;
-	height: 14px;
+.pmb-filter-panel-item-check {
+	color: var(--pmb-accent);
 }
 
 .pmb-lane {

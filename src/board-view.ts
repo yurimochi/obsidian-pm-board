@@ -230,10 +230,17 @@ export class BoardView extends BasesView {
 		const filterEl = parentEl.createDiv({ cls: "pmb-filter" });
 
 		const triggerBtn = filterEl.createEl("button", { cls: "pmb-filter-icon-btn" });
-		setIcon(triggerBtn, "lucide-filter");
+		const iconWrapEl = triggerBtn.createSpan({ cls: "pmb-filter-icon-wrap" });
+		setIcon(iconWrapEl, "lucide-filter");
+		if (config.listFilterProperty && config.listFilterValue) {
+			iconWrapEl.createSpan({ cls: "pmb-filter-icon-badge" });
+		}
+		// A static placeholder, no assigned action yet — left undecided by design.
+		const dotsEl = triggerBtn.createSpan({ cls: "pmb-filter-icon-dots" });
+		for (let i = 0; i < 3; i++) dotsEl.createSpan({ cls: "pmb-filter-icon-dot" });
 		this.registerDomEvent(triggerBtn, "click", () => {
 			this.filterPanelOpen = !this.filterPanelOpen;
-			if (this.filterPanelOpen) this.filterPanelExpanded = null;
+			this.filterPanelExpanded = null;
 			this.onDataUpdated();
 		});
 
@@ -306,11 +313,13 @@ export class BoardView extends BasesView {
 		const sectionEl = parentEl.createDiv({ cls: "pmb-filter-panel-section" });
 
 		const headerEl = sectionEl.createDiv({ cls: "pmb-filter-panel-header" });
-		setIcon(headerEl.createSpan({ cls: "pmb-filter-panel-header-icon" }), icon);
-		headerEl.createSpan({ cls: "pmb-filter-panel-header-label", text: label });
-		headerEl.createSpan({ cls: "pmb-filter-panel-header-value", text: currentValue });
+		const headerLeftEl = headerEl.createSpan({ cls: "pmb-filter-panel-header-left" });
+		setIcon(headerLeftEl.createSpan({ cls: "pmb-filter-panel-header-icon" }), icon);
+		headerLeftEl.createSpan({ cls: "pmb-filter-panel-header-label", text: label });
+		const headerRightEl = headerEl.createSpan({ cls: "pmb-filter-panel-header-right" });
+		headerRightEl.createSpan({ cls: "pmb-filter-panel-header-value", text: currentValue });
 		setIcon(
-			headerEl.createSpan({ cls: "pmb-filter-panel-header-chevron" }),
+			headerRightEl.createSpan({ cls: "pmb-filter-panel-header-chevron" }),
 			expanded ? "lucide-chevron-down" : "lucide-chevron-right",
 		);
 		this.registerDomEvent(headerEl, "click", () => {
@@ -324,7 +333,9 @@ export class BoardView extends BasesView {
 			const itemEl = listEl.createDiv({ cls: "pmb-filter-panel-item" });
 			itemEl.toggleClass("pmb-filter-panel-item-active", item.active);
 			itemEl.createSpan({ text: item.label });
-			if (item.active) setIcon(itemEl.createSpan(), "lucide-check");
+			if (item.active) {
+				itemEl.createSpan({ cls: "pmb-filter-panel-item-check", text: "✓" });
+			}
 			this.registerDomEvent(itemEl, "click", item.onClick);
 		}
 	}

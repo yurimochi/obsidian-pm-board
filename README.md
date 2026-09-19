@@ -68,6 +68,12 @@ Picking one of those hides every card that doesn't carry it, in every lane
 and column, and closes the whole panel; "All" closes it too, showing
 everything again. The panel also closes on an outside click.
 
+In dark mode the trigger itself is a glassmorphic pill (a background blur
+needs a non-flat background behind it to read, which the light palette
+isn't); a small dot on its icon shows once a property and a specific value
+(not "All") are both set. Its "⋯" is a static placeholder from the design
+with no assigned action yet.
+
 Both the property and the chosen value are written to the board's own
 settings, the same as a collapsed column or a WIP limit, so the filter is
 still applied the next time the board opens.
