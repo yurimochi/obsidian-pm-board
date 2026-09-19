@@ -915,14 +915,15 @@
 
 .pmb-td-description {
 	flex: 1;
-	background: transparent;
+	background-color: var(--pmb-td-pill-bg);
 	border: none;
+	border-radius: 10px;
 	outline: none;
 	resize: none;
 	color: var(--pmb-td-description);
 	font-size: 14px;
 	line-height: 1.5;
-	padding: 4px 6px;
+	padding: 12px;
 	font-family: inherit;
 }
 
