@@ -7,7 +7,7 @@ kanban-style board whose columns come from the Base's own `groupBy`
 configuration. Cards are your notes; moving a card writes the change straight
 back to the note's frontmatter.
 
-> **Status: early development (0.6.15).** Everything is built except what's
+> **Status: early development (0.6.16).** Everything is built except what's
 > still listed on the roadmap below, and most of it confirmed working in a
 > running vault. See **Known gaps** for what hasn't been yet.
 
