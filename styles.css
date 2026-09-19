@@ -106,9 +106,23 @@
 	align-items: center;
 	gap: 8px;
 	padding: 8px 12px;
+	border-radius: 8px;
 	color: var(--pmb-text);
 	font-size: 14px;
 	font-weight: 600;
+	cursor: pointer;
+}
+
+.pmb-filter-panel-header:hover {
+	background-color: var(--pmb-dropdown-hover);
+}
+
+/* A fixed height (not max-height) so both sections' headers stay put
+   whether the list under one of them is short or long enough to scroll,
+   rather than the panel growing with however many properties there are. */
+.pmb-filter-panel-items {
+	height: 200px;
+	overflow-y: auto;
 }
 
 .pmb-filter-panel-header-icon {

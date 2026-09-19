@@ -108,6 +108,8 @@ export class BoardView extends BasesView {
 	private activePath: string | null = null;
 	/** Whether the header's filter panel is open; survives a redraw so picking a property doesn't close it. */
 	private filterPanelOpen = false;
+	/** Which of the filter panel's two sections is expanded, if either; both start collapsed. */
+	private filterPanelExpanded: "property" | "filtering" | null = null;
 	private readonly renderContext: RenderContext = { hoverPopover: null };
 
 	constructor(
@@ -210,13 +212,14 @@ export class BoardView extends BasesView {
 
 	/**
 	 * The board's own header: a single funnel icon opens a panel with two
-	 * always-visible sections — Property (every property the query has,
-	 * tags included) and Filtering (once a property is picked, its distinct
-	 * values). Picking a property narrows the board to it with no value yet
-	 * (equivalent to "All"); picking a value commits it and closes the
-	 * panel. The panel survives the redraw either of those triggers, via
-	 * `filterPanelOpen`, so picking a property doesn't close it before
-	 * Filtering's values even show.
+	 * sections — Property (every property the query has, tags included) and
+	 * Filtering (once a property is picked, its distinct values). Both
+	 * start collapsed to just their header row; clicking a header expands
+	 * that section's own scrollable list (the other collapses, an
+	 * accordion). Picking a property narrows the board to it with no value
+	 * yet (equivalent to "All") and switches straight to Filtering expanded
+	 * — its values show up in the same panel rather than requiring it be
+	 * reopened. Picking a value commits it and closes the whole panel.
 	 */
 	private renderFilterBar(
 		parentEl: HTMLElement,
@@ -230,6 +233,7 @@ export class BoardView extends BasesView {
 		setIcon(triggerBtn, "lucide-filter");
 		this.registerDomEvent(triggerBtn, "click", () => {
 			this.filterPanelOpen = !this.filterPanelOpen;
+			if (this.filterPanelOpen) this.filterPanelExpanded = null;
 			this.onDataUpdated();
 		});
 
@@ -239,6 +243,7 @@ export class BoardView extends BasesView {
 		const property = config.listFilterProperty;
 		this.renderFilterPanelSection(
 			panelEl,
+			"property",
 			"lucide-folder",
 			"Property",
 			property ? this.config.getDisplayName(property) : "None",
@@ -247,6 +252,7 @@ export class BoardView extends BasesView {
 				active: candidate === property,
 				onClick: () => {
 					setListFilter(this.config, candidate, null);
+					this.filterPanelExpanded = "filtering";
 					if (!this.notifyConfigChanged()) this.onDataUpdated();
 				},
 			})),
@@ -257,6 +263,7 @@ export class BoardView extends BasesView {
 		const values = property ? distinctListValues(entries, property) : [];
 		this.renderFilterPanelSection(
 			panelEl,
+			"filtering",
 			"lucide-filter",
 			"Filtering",
 			config.listFilterValue ?? "All",
@@ -269,6 +276,7 @@ export class BoardView extends BasesView {
 							onClick: () => {
 								setListFilter(this.config, property, null);
 								this.filterPanelOpen = false;
+								this.filterPanelExpanded = null;
 								if (!this.notifyConfigChanged()) this.onDataUpdated();
 							},
 						},
@@ -278,6 +286,7 @@ export class BoardView extends BasesView {
 							onClick: () => {
 								setListFilter(this.config, property, value);
 								this.filterPanelOpen = false;
+								this.filterPanelExpanded = null;
 								if (!this.notifyConfigChanged()) this.onDataUpdated();
 							},
 						})),
@@ -287,11 +296,13 @@ export class BoardView extends BasesView {
 
 	private renderFilterPanelSection(
 		parentEl: HTMLElement,
+		section: "property" | "filtering",
 		icon: string,
 		label: string,
 		currentValue: string,
 		items: { label: string; active: boolean; onClick: () => void }[],
 	): void {
+		const expanded = this.filterPanelExpanded === section;
 		const sectionEl = parentEl.createDiv({ cls: "pmb-filter-panel-section" });
 
 		const headerEl = sectionEl.createDiv({ cls: "pmb-filter-panel-header" });
@@ -300,11 +311,17 @@ export class BoardView extends BasesView {
 		headerEl.createSpan({ cls: "pmb-filter-panel-header-value", text: currentValue });
 		setIcon(
 			headerEl.createSpan({ cls: "pmb-filter-panel-header-chevron" }),
-			"lucide-chevron-right",
+			expanded ? "lucide-chevron-down" : "lucide-chevron-right",
 		);
+		this.registerDomEvent(headerEl, "click", () => {
+			this.filterPanelExpanded = expanded ? null : section;
+			this.onDataUpdated();
+		});
 
+		if (!expanded) return;
+		const listEl = sectionEl.createDiv({ cls: "pmb-filter-panel-items" });
 		for (const item of items) {
-			const itemEl = sectionEl.createDiv({ cls: "pmb-filter-panel-item" });
+			const itemEl = listEl.createDiv({ cls: "pmb-filter-panel-item" });
 			itemEl.toggleClass("pmb-filter-panel-item-active", item.active);
 			itemEl.createSpan({ text: item.label });
 			if (item.active) setIcon(itemEl.createSpan(), "lucide-check");

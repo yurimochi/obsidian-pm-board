@@ -57,15 +57,16 @@ rather than to the column as a whole.
 
 ## Filtering
 
-A funnel icon in the board's own header opens a panel with two sections:
-**Property** lists every property the query has, tags included; picking
-one narrows nothing yet on its own, but reveals **Filtering** below it —
+A funnel icon in the board's own header opens a panel with two sections,
+**Property** and **Filtering**, both collapsed to just their header row at
+first. Clicking a header expands that section's own 200px scrollable list
+— the other one collapses, an accordion — and Property's lists every
+property the query has, tags included. Picking one narrows nothing yet on
+its own, but collapses Property and expands Filtering in its place, listing
 every distinct value that property holds across the board, "All" first.
 Picking one of those hides every card that doesn't carry it, in every lane
-and column, and closes the panel; "All" closes it too, showing everything
-again. The panel stays open across a property pick, though, so its values
-show up in the same place rather than requiring it be reopened, and closes
-on an outside click.
+and column, and closes the whole panel; "All" closes it too, showing
+everything again. The panel also closes on an outside click.
 
 Both the property and the chosen value are written to the board's own
 settings, the same as a collapsed column or a WIP limit, so the filter is
