@@ -1001,20 +1001,11 @@
 
 .pmb-task-sheet .pmb-td-description {
 	flex: 0 0 auto;
-	min-height: 100px;
-}
-
-.pmb-ts-handle-wrap {
-	display: flex;
-	justify-content: center;
-	flex-shrink: 0;
-}
-
-.pmb-ts-handle {
-	width: 36px;
-	height: 4px;
-	border-radius: 2px;
-	background-color: var(--pmb-td-pill-hover);
+	background-color: var(--pmb-td-group-bg);
+	border-radius: 20px;
+	padding: 14px 16px;
+	min-height: 280px;
+	font-size: 16px;
 }
 
 .pmb-ts-header {
@@ -1085,7 +1076,7 @@
 
 .pmb-ts-title-text {
 	color: var(--pmb-td-text);
-	font-size: 17px;
+	font-size: 14px;
 	font-weight: 700;
 	line-height: 1.3;
 }
@@ -1109,7 +1100,7 @@
 
 .pmb-ts-row-value {
 	color: var(--pmb-td-text);
-	font-size: 15px;
+	font-size: 12px;
 }
 
 .pmb-ts-row-empty .pmb-ts-row-value {

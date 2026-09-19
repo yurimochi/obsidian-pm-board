@@ -281,19 +281,21 @@ button of its own; Escape or clicking outside it, Obsidian's own modal
 behaviour, is how it closes.
 
 **On mobile**, it's a bottom-sheet-styled summary instead, from its own
-design handoff, since adjusted for parity with desktop: a drag handle and a
-close/more header (at least 450px tall, though it grows past that with a
-long description, up to 85% of the viewport before it scrolls internally),
-a description field the same as desktop's, and a grouped card of property
-rows — title (with a status ring, coloured only once the `due` date is in
-the past), Project, Due, Priority, and Tags, each row tappable to edit the
-same way as the desktop panel's pills. All rows always show, even unset
-(muted, same as desktop), rather than the original handoff's omit-when-empty
-treatment. The header's "..." opens the note itself in the active pane
-(the same as a long-press card menu's **Open**) rather than the handoff's
-placeholder with no action, which is also how to reach anything this sheet
-doesn't cover — arbitrary frontmatter, Obsidian's own Properties widget,
-the rest of the note.
+design handoff (revised since the first pass to drop the drag handle,
+swap the header's two buttons to "..." on the left / X on the right, and
+add a description field of its own): a header, a grouped card of property
+rows — title (14px/700, with a status ring coloured only once the `due`
+date is in the past), Project, Due, Priority, and Tags, each row tappable
+to edit the same way as the desktop panel's pills — and, below that, a
+separate rounded description box (280px minimum height, its own surface
+distinct from the property card's). The whole sheet is at least 450px
+tall, growing past that for longer content, up to 85% of the viewport
+before it scrolls internally. All rows always show, even unset (muted),
+rather than the handoffs' own omit-when-empty treatment, and the header's
+"..." opens the note itself in the active pane (the same as a long-press
+card menu's **Open**) rather than sitting unwired — both intentional
+departures from the handoffs, for parity with the desktop panel and so
+every field stays reachable from the sheet itself.
 
 ## Known gaps
 

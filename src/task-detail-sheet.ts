@@ -4,12 +4,11 @@ import { TaskProperties } from "./task-properties";
 
 /**
  * Mobile-only floating task sheet: a tap-to-edit summary of a card's
- * properties (project, due date, tags, priority), per the design handoff,
- * plus a description field (the note's body) for parity with the desktop
- * floating. The "..." header button opens the note itself, the same as a
- * long-press card menu's Open, for anything this sheet doesn't cover
- * (arbitrary frontmatter, the native Properties widget, the rest of the
- * note's content).
+ * properties (project, due date, tags, priority) plus a description field
+ * (the note's body), per the design handoff. The "..." header button opens
+ * the note itself, the same as a long-press card menu's Open, for anything
+ * this sheet doesn't cover (arbitrary frontmatter, the native Properties
+ * widget, the rest of the note's content).
  */
 export class TaskDetailSheet extends Modal {
 	private readonly props: TaskProperties;
@@ -36,11 +35,10 @@ export class TaskDetailSheet extends Modal {
 		this.originalDescription = await this.props.load();
 		this.title = this.file.basename;
 
-		this.renderHandle();
 		this.renderHeader();
-		this.renderDescription();
 		this.groupEl = this.contentEl.createDiv({ cls: "pmb-ts-group" });
 		this.renderGroup();
+		this.renderDescription();
 	}
 
 	onClose(): void {
@@ -48,17 +46,8 @@ export class TaskDetailSheet extends Modal {
 		this.onDismiss?.();
 	}
 
-	private renderHandle(): void {
-		const wrapEl = this.contentEl.createDiv({ cls: "pmb-ts-handle-wrap" });
-		wrapEl.createDiv({ cls: "pmb-ts-handle" });
-	}
-
 	private renderHeader(): void {
 		const headerEl = this.contentEl.createDiv({ cls: "pmb-ts-header" });
-
-		const closeEl = headerEl.createSpan({ cls: "pmb-ts-icon-btn" });
-		setIcon(closeEl, "lucide-x");
-		closeEl.addEventListener("click", () => this.close());
 
 		const moreEl = headerEl.createSpan({ cls: "pmb-ts-icon-btn" });
 		setIcon(moreEl, "lucide-more-horizontal");
@@ -66,6 +55,10 @@ export class TaskDetailSheet extends Modal {
 			this.close();
 			void this.app.workspace.getLeaf(false).openFile(this.file);
 		});
+
+		const closeEl = headerEl.createSpan({ cls: "pmb-ts-icon-btn" });
+		setIcon(closeEl, "lucide-x");
+		closeEl.addEventListener("click", () => this.close());
 	}
 
 	private renderDescription(): void {
