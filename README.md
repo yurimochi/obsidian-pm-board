@@ -268,7 +268,13 @@ project, due (a fixed `due` frontmatter property, not one you configure),
 tags, and priority — through shared logic (`TaskProperties`), so an edit
 made on one platform's floating looks exactly like one made on the other's,
 and both write straight to the note's frontmatter or body, the same as the
-card's own context menu actions elsewhere on the board.
+card's own context menu actions elsewhere on the board. A property held as
+a wikilink (project being one commonly is) shows and reads back as its
+alias or note name rather than the raw `[[...]]` text. Obsidian adds its
+own close button to every Modal regardless of subclass; both floatings
+hide it (they close via Escape or clicking outside instead, which is
+already how Obsidian's own modals behave), since on desktop it sat close
+enough over the title field to swallow clicks meant for the input under it.
 
 **On desktop**, it's a compact task editor built from a design handoff, not
 the raw note: a fixed-height (450px) panel with a title, a description (the
@@ -296,6 +302,12 @@ rather than the handoffs' own omit-when-empty treatment, and the header's
 card menu's **Open**) rather than sitting unwired — both intentional
 departures from the handoffs, for parity with the desktop panel and so
 every field stays reachable from the sheet itself.
+
+Focusing the description on mobile can put it behind the on-screen
+keyboard, low in a sheet that already runs tall; Obsidian's modal doesn't
+reposition for that on its own, so the sheet watches `visualViewport` for
+the keyboard's own resize and caps its height to whatever space is left
+above it while the field is focused, scrolling the field into that space.
 
 ## Known gaps
 

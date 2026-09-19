@@ -16,6 +16,8 @@ export class TaskDetailSheet extends Modal {
 	private groupEl!: HTMLElement;
 	private title = "";
 	private originalDescription = "";
+	/** Set only while the description is focused, so it can be torn down again on blur. */
+	private keyboardListener: (() => void) | null = null;
 
 	constructor(
 		app: App,
@@ -42,6 +44,7 @@ export class TaskDetailSheet extends Modal {
 	}
 
 	onClose(): void {
+		this.clearKeyboardOffset();
 		this.contentEl.empty();
 		this.onDismiss?.();
 	}
@@ -65,7 +68,44 @@ export class TaskDetailSheet extends Modal {
 		this.descriptionEl = this.contentEl.createEl("textarea", { cls: "pmb-td-description" });
 		this.descriptionEl.value = this.originalDescription;
 		this.descriptionEl.placeholder = "Add a description…";
-		this.descriptionEl.addEventListener("blur", () => void this.commitDescription());
+		this.descriptionEl.addEventListener("focus", () => this.avoidKeyboard());
+		this.descriptionEl.addEventListener("blur", () => {
+			void this.commitDescription();
+			this.clearKeyboardOffset();
+		});
+	}
+
+	/**
+	 * The description sits low in a sheet that can already run to 85% of the
+	 * viewport, and the on-screen keyboard can cover it entirely; Obsidian's
+	 * modal doesn't reposition for that on its own. `visualViewport` reports
+	 * the space the keyboard actually leaves, so the sheet is capped to that
+	 * instead of its usual max-height, and the field is scrolled into what's
+	 * left, while focused.
+	 */
+	private avoidKeyboard(): void {
+		const viewport = window.visualViewport;
+		if (!viewport) return;
+		const reposition = (): void => {
+			this.modalEl.style.setProperty(
+				"max-height",
+				`${Math.max(200, viewport.height - 32)}px`,
+			);
+			this.descriptionEl.scrollIntoView({ block: "center", behavior: "smooth" });
+		};
+		this.clearKeyboardOffset();
+		viewport.addEventListener("resize", reposition);
+		this.keyboardListener = reposition;
+		// The keyboard's own show animation hasn't resolved by the time focus fires.
+		window.setTimeout(reposition, 300);
+	}
+
+	private clearKeyboardOffset(): void {
+		if (this.keyboardListener) {
+			window.visualViewport?.removeEventListener("resize", this.keyboardListener);
+			this.keyboardListener = null;
+		}
+		this.modalEl.style.removeProperty("max-height");
 	}
 
 	private async commitDescription(): Promise<void> {

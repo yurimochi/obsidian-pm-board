@@ -867,6 +867,14 @@
 	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
+/* Obsidian adds this to every Modal regardless of subclass. Both floatings
+   close via Escape or clicking outside instead (their own design, not this
+   button), and on desktop it was overlapping the title field closely
+   enough to swallow clicks meant for the input underneath it. */
+.pmb-task-detail .modal-close-button {
+	display: none;
+}
+
 .pmb-task-detail .modal-content {
 	display: flex;
 	flex-direction: column;

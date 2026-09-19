@@ -9,9 +9,33 @@ import { parseTagList } from "./tag-colors";
 /** Fixed, like `tags`: not a per-board configurable property. */
 export const DUE_PROPERTY = "due";
 
-/** A frontmatter value as display text, or "" for anything that isn't already text-shaped. */
+/**
+ * A wikilink's display text — its alias if it has one, otherwise the
+ * linked note's own name, dropping any heading/block reference — since a
+ * property like project is commonly a link to the project's own note
+ * rather than plain text, and showing the raw `[[...]]` syntax isn't the
+ * "reference" a link property actually holds.
+ */
+function resolveLink(raw: string): string {
+	const match = /^\[\[([^\]]+)\]\]$/.exec(raw);
+	if (!match) return raw;
+	const [target, alias] = match[1].split("|");
+	if (alias) return alias.trim();
+	const withoutHeading = target.split("#")[0];
+	return (withoutHeading.split("/").pop() || withoutHeading).trim();
+}
+
+/**
+ * A frontmatter value as display text: a wikilink resolves to its display
+ * name (see `resolveLink`); a single-item list is unwrapped, matching how
+ * a property picker sometimes stores even a single value as a list; anything
+ * else that isn't already text-shaped reads as "".
+ */
 export function textOf(value: unknown): string {
-	return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+	// Array.isArray narrows to any[], not unknown[], hence the cast.
+	const scalar = Array.isArray(value) ? (value as unknown[])[0] : value;
+	if (typeof scalar !== "string" && typeof scalar !== "number") return "";
+	return resolveLink(String(scalar).trim());
 }
 
 interface SplitContent {
