@@ -89,9 +89,9 @@ also carries its own date, since the column itself no longer names one.
 The board's colours are fixed, not derived from the installed Obsidian
 theme: a light and a dark palette baked into the plugin, switching with
 Obsidian's own light/dark appearance setting rather than a community theme's
-variables. The desktop task-detail floating (see **Card detail** below) has
-its own such palette too; the rename/tag-edit prompts and mobile's live-leaf
-card detail still follow Obsidian's native modal styling.
+variables. Both task-detail floatings (see **Card detail** below) share
+this same fixed palette; only the rename/tag-edit prompts still follow
+Obsidian's native modal styling.
 
 ### Priority
 
@@ -263,30 +263,36 @@ card does:
 Modifier keys always win over the setting, matching the rest of Obsidian:
 Ctrl/Cmd-click opens a new tab, and Ctrl/Cmd-Alt-click opens a split.
 
-**On desktop**, the floating modal is a compact task editor built from a
-design handoff, not the raw note: a fixed-height (450px) panel with a
-title, a description (the note's body, minus its frontmatter, in a plain
-text field that fills the remaining space), and a bottom toolbar of
-property pills — Project, Due (a fixed `due` property, not one you
-configure), Tags, and Priority — each editable in place. All four labels
-always show, even with nothing set yet (shown muted until a value is
-picked), rather than appearing only once a value exists. Every edit writes
-straight to the note's frontmatter or body, the same as the card's own
-context menu actions elsewhere on the board. The panel has no close or
-submit button of its own; Escape or clicking outside it, Obsidian's own
-modal behaviour, is how it closes. Only the mobile version of this same
-floating still has to be designed.
+Both the desktop and mobile floatings read and write the same fields —
+project, due (a fixed `due` frontmatter property, not one you configure),
+tags, and priority — through shared logic (`TaskProperties`), so an edit
+made on one platform's floating looks exactly like one made on the other's,
+and both write straight to the note's frontmatter or body, the same as the
+card's own context menu actions elsewhere on the board.
 
-**On mobile**, the floating modal instead hosts a live, editable pane,
-properties widget included, the same as opening the note anywhere else. It
-builds a `WorkspaceSplit` and a `WorkspaceLeaf` outside the normal workspace
-tree, which the public API does not document a way to do; the wiring and
-the CSS that sizes it both adapt the technique the
-[Hover Editor](https://github.com/nothingislost/obsidian-hover-editor)
-community plugin uses for its own floating panes, an unrelated project used
-here only as a reference for this one undocumented mechanism, not for any
-part of the board itself. If the leaf cannot be built, the modal falls back
-to a rendered, read-only preview with an **Open note** button instead.
+**On desktop**, it's a compact task editor built from a design handoff, not
+the raw note: a fixed-height (450px) panel with a title, a description (the
+note's body, minus its frontmatter, in a plain text field that fills the
+remaining space), and a bottom toolbar of property pills — Project, Due,
+Tags, and Priority — each editable in place. All four labels always show,
+even with nothing set yet (shown muted until a value is picked), rather
+than appearing only once a value exists. The panel has no close or submit
+button of its own; Escape or clicking outside it, Obsidian's own modal
+behaviour, is how it closes.
+
+**On mobile**, it's a bottom-sheet-styled summary instead, from its own
+design handoff: a drag handle and a close/more header above a grouped card
+of property rows — title (with a status ring, coloured only once the `due`
+date is in the past), Project, Due, Priority, and Tags, each row tappable
+to edit the same way as the desktop panel's pills. Due and Priority rows
+are left out entirely while unset, matching that design exactly (unlike
+desktop's always-shown pills); there's no affordance in this sheet to add
+either back once removed (the design doesn't specify one), so setting
+either from scratch still means editing the note's frontmatter directly.
+Unlike desktop, there is no description field here either — this design
+doesn't have one, matching the original screen's own fields exactly. The
+full note is still one tap away regardless, either through a long-press
+card menu's **Open**, or another **Card Detail** setting.
 
 ## Known gaps
 
@@ -325,12 +331,6 @@ to a rendered, read-only preview with an **Open note** button instead.
   the plugin looks one up on the query controller at runtime. It is never
   assumed to exist: without it a column still collapses, it just forgets on
   reopen.
-- **The floating card detail's live leaf relies on undocumented APIs.** It
-  builds a `WorkspaceSplit` and `WorkspaceLeaf` outside the normal workspace
-  tree, the same way the Hover Editor plugin does for its own popovers.
-  Verified working in a vault, but as with anything past the public API, an
-  Obsidian update could change the internals it depends on; the read-only
-  preview is the fallback if it ever stops mounting.
 
 ## Card order
 

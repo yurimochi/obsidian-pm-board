@@ -807,42 +807,6 @@
 	display: none;
 }
 
-.pmb-card-detail.modal {
-	width: min(700px, 90vw);
-	max-height: 85vh;
-}
-
-.pmb-card-detail-open {
-	margin-bottom: var(--size-4-3);
-}
-
-/* The live leaf brings its own title, properties widget and editor, so it
-   needs real dimensions rather than the read-only preview's content box. */
-.pmb-card-detail-live.modal {
-	width: min(900px, 90vw);
-	height: min(700px, 85vh);
-}
-
-.pmb-card-detail-live .modal-content {
-	display: flex;
-	height: 100%;
-	padding: 0;
-	overflow: hidden;
-}
-
-/* Outside the normal workspace tree, Obsidian's own CSS does not carry a
-   height down to the leaf on its own; the split and leaf need it spelled
-   out here, the same way the Hover Editor plugin does for its own popover. */
-.pmb-card-detail-live .workspace-split,
-.pmb-card-detail-live .workspace-leaf {
-	height: 100%;
-	width: 100%;
-}
-
-.pmb-card-detail-live .workspace-split .view-content {
-	background-color: var(--background-primary);
-}
-
 .pmb-prompt-input {
 	width: 100%;
 }
@@ -867,11 +831,17 @@
 	--pmb-td-text: #1a1a1a;
 	--pmb-td-description: #5a5a5a;
 	--pmb-td-icon: #6a6a6a;
+	--pmb-td-muted-3: #a0a0a0;
 	--pmb-td-accent: #e2735a;
 	--pmb-td-priority-p1: #e2735a;
 	--pmb-td-priority-p2: #f97316;
 	--pmb-td-priority-p3: #eab308;
 	--pmb-td-priority-p4: #9a9a9a;
+	--pmb-td-ring-idle: #5a5a5a;
+	/* Mobile sheet only: the grouped property card and its tag chips sit a
+	   little apart from the general pill surface above. */
+	--pmb-td-group-bg: #ffffff;
+	--pmb-td-chip-bg: #ececec;
 }
 
 .theme-dark .pmb-task-detail {
@@ -882,6 +852,9 @@
 	--pmb-td-text: #f2f2f2;
 	--pmb-td-description: #c9c9c9;
 	--pmb-td-icon: #9a9a9a;
+	--pmb-td-muted-3: #6f6f6f;
+	--pmb-td-group-bg: #242424;
+	--pmb-td-chip-bg: #2f2f2f;
 }
 
 .pmb-task-detail.modal {
@@ -1005,4 +978,168 @@
 .pmb-td-pill-clear svg {
 	width: 100%;
 	height: 100%;
+}
+
+/* Mobile task-detail sheet. Shares .pmb-task-detail's colour tokens above;
+   everything here is its own layout on top of that (a grouped property
+   list rather than the desktop's toolbar of pills), plus the sizing
+   overrides that replace the desktop panel's fixed 640×450. */
+.pmb-task-sheet.modal {
+	width: 390px;
+	max-width: calc(100vw - 32px);
+	height: auto;
+	max-height: 85vh;
+	border-radius: 32px;
+}
+
+.pmb-task-sheet .modal-content {
+	gap: 20px;
+	padding: 20px 20px 24px;
+	overflow-y: auto;
+}
+
+.pmb-ts-handle-wrap {
+	display: flex;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.pmb-ts-handle {
+	width: 36px;
+	height: 4px;
+	border-radius: 2px;
+	background-color: var(--pmb-td-pill-hover);
+}
+
+.pmb-ts-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-shrink: 0;
+}
+
+.pmb-ts-icon-btn {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background-color: var(--pmb-td-pill-bg);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--pmb-td-text);
+	cursor: pointer;
+}
+
+.pmb-ts-icon-btn svg {
+	width: 16px;
+	height: 16px;
+}
+
+.pmb-ts-group {
+	background-color: var(--pmb-td-group-bg);
+	border-radius: 20px;
+	overflow: hidden;
+}
+
+.pmb-ts-row {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 16px;
+	cursor: pointer;
+}
+
+.pmb-ts-row-title {
+	padding: 18px 16px;
+	cursor: default;
+}
+
+.pmb-ts-row-tags {
+	align-items: flex-start;
+}
+
+.pmb-ts-divider {
+	height: 1px;
+	margin: 0 16px;
+	background-color: var(--pmb-td-pill-hover);
+}
+
+.pmb-ts-ring {
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	border: 2.5px solid var(--pmb-td-ring-idle);
+	flex: 0 0 22px;
+	box-sizing: border-box;
+}
+
+.pmb-ts-ring-overdue {
+	border-color: var(--pmb-td-accent);
+}
+
+.pmb-ts-title-text {
+	color: var(--pmb-td-text);
+	font-size: 17px;
+	font-weight: 700;
+	line-height: 1.3;
+}
+
+.pmb-ts-row-icon {
+	display: flex;
+	flex-shrink: 0;
+	width: 20px;
+	height: 20px;
+	color: var(--pmb-td-icon);
+}
+
+.pmb-ts-row-icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.pmb-ts-row-icon-priority {
+	color: var(--pmb-td-priority-color, var(--pmb-td-accent));
+}
+
+.pmb-ts-row-value {
+	color: var(--pmb-td-text);
+	font-size: 15px;
+}
+
+.pmb-ts-row-empty .pmb-ts-row-value {
+	color: var(--pmb-td-icon);
+}
+
+.pmb-ts-row-value-priority {
+	color: var(--pmb-td-priority-color, var(--pmb-td-accent));
+	font-weight: 600;
+}
+
+.pmb-ts-row-accent .pmb-ts-row-value {
+	color: var(--pmb-td-accent);
+}
+
+.pmb-ts-row-accent .pmb-ts-row-icon {
+	color: var(--pmb-td-accent);
+}
+
+.pmb-ts-tag-wrap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.pmb-ts-tag {
+	display: flex;
+	align-items: center;
+	background-color: var(--pmb-td-chip-bg);
+	color: var(--pmb-td-tag-color, var(--pmb-td-text));
+	font-size: 13px;
+	padding: 6px 12px;
+	border-radius: 999px;
+}
+
+.pmb-ts-tag-empty {
+	color: var(--pmb-td-muted-3);
+	font-size: 14px;
 }

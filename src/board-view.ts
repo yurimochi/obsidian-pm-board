@@ -30,7 +30,6 @@ import {
 	setListFilter,
 } from "./board-config";
 import { cardTitle, renderCard, valuesOf } from "./card";
-import { CardDetailModal } from "./card-detail-modal";
 import { groupKeyOf, sortGroups } from "./column-order";
 import { ConfirmModal } from "./confirm-modal";
 import { BOARD_VIEW_TYPE } from "./constants";
@@ -67,6 +66,7 @@ import {
 import { applyPlaceholders, joinPath, uniqueName } from "./template";
 import { parseTagList } from "./tag-colors";
 import { TaskDetailModal } from "./task-detail-modal";
+import { TaskDetailSheet } from "./task-detail-sheet";
 
 /** How long a still touch is held before it counts as a long press, opening the card menu. */
 const TOUCH_LONG_PRESS_MS = 450;
@@ -1081,10 +1081,8 @@ export class BoardView extends BasesView {
 			const onDismiss = (): void => {
 				this.pendingFocus = file.path;
 			};
-			// The floating task editor has a design only for desktop so far;
-			// mobile keeps the live-leaf modal until it gets one of its own.
 			if (Platform.isMobile) {
-				new CardDetailModal(this.app, file, onDismiss).open();
+				new TaskDetailSheet(this.app, file, config, onDismiss).open();
 			} else {
 				new TaskDetailModal(this.app, file, config, onDismiss).open();
 			}
