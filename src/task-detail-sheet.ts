@@ -1,19 +1,22 @@
-import { App, Modal, setIcon, TFile } from "obsidian";
+import { App, Modal, Notice, setIcon, TFile } from "obsidian";
 import { BoardConfig } from "./board-config";
 import { TaskProperties } from "./task-properties";
 
 /**
- * Mobile-only floating task sheet: a read-mostly, tap-to-edit summary of a
- * card's properties (project, due date, tags, priority), per the design
- * handoff. The note's own body isn't shown here — unlike the desktop
- * floating, this design has no description field, matching the original
- * screen's fields exactly. The full note is still one tap away, either via
- * a long-press card menu's Open, or another Card Detail setting.
+ * Mobile-only floating task sheet: a tap-to-edit summary of a card's
+ * properties (project, due date, tags, priority), per the design handoff,
+ * plus a description field (the note's body) for parity with the desktop
+ * floating. The "..." header button opens the note itself, the same as a
+ * long-press card menu's Open, for anything this sheet doesn't cover
+ * (arbitrary frontmatter, the native Properties widget, the rest of the
+ * note's content).
  */
 export class TaskDetailSheet extends Modal {
 	private readonly props: TaskProperties;
+	private descriptionEl!: HTMLTextAreaElement;
 	private groupEl!: HTMLElement;
 	private title = "";
+	private originalDescription = "";
 
 	constructor(
 		app: App,
@@ -30,11 +33,12 @@ export class TaskDetailSheet extends Modal {
 
 	async onOpen(): Promise<void> {
 		this.contentEl.empty();
-		await this.props.load();
+		this.originalDescription = await this.props.load();
 		this.title = this.file.basename;
 
 		this.renderHandle();
 		this.renderHeader();
+		this.renderDescription();
 		this.groupEl = this.contentEl.createDiv({ cls: "pmb-ts-group" });
 		this.renderGroup();
 	}
@@ -56,10 +60,31 @@ export class TaskDetailSheet extends Modal {
 		setIcon(closeEl, "lucide-x");
 		closeEl.addEventListener("click", () => this.close());
 
-		// A placeholder for a future menu, same as the design handoff: no
-		// defined action yet.
 		const moreEl = headerEl.createSpan({ cls: "pmb-ts-icon-btn" });
 		setIcon(moreEl, "lucide-more-horizontal");
+		moreEl.addEventListener("click", () => {
+			this.close();
+			void this.app.workspace.getLeaf(false).openFile(this.file);
+		});
+	}
+
+	private renderDescription(): void {
+		this.descriptionEl = this.contentEl.createEl("textarea", { cls: "pmb-td-description" });
+		this.descriptionEl.value = this.originalDescription;
+		this.descriptionEl.placeholder = "Add a description…";
+		this.descriptionEl.addEventListener("blur", () => void this.commitDescription());
+	}
+
+	private async commitDescription(): Promise<void> {
+		const next = this.descriptionEl.value.trim();
+		if (next === this.originalDescription) return;
+		try {
+			await this.props.commitDescription(next);
+			this.originalDescription = next;
+		} catch (error) {
+			console.error("PM-Board: could not update the description.", error);
+			new Notice("Could not update the description.");
+		}
 	}
 
 	private renderGroup(): void {
@@ -117,11 +142,12 @@ export class TaskDetailSheet extends Modal {
 
 	private renderDueRow(): boolean {
 		const value = this.props.due;
-		if (!value) return false;
 
-		const rowEl = this.groupEl.createDiv({ cls: "pmb-ts-row pmb-ts-row-accent" });
+		const rowEl = this.groupEl.createDiv({ cls: "pmb-ts-row" });
+		rowEl.toggleClass("pmb-ts-row-accent", !!value);
+		rowEl.toggleClass("pmb-ts-row-empty", !value);
 		setIcon(rowEl.createSpan({ cls: "pmb-ts-row-icon" }), "lucide-calendar");
-		rowEl.createSpan({ cls: "pmb-ts-row-value", text: value });
+		rowEl.createSpan({ cls: "pmb-ts-row-value", text: value || "Due" });
 		rowEl.addEventListener("click", () => {
 			void this.props.promptDue().then((changed) => {
 				if (changed) this.renderGroup();
@@ -133,21 +159,21 @@ export class TaskDetailSheet extends Modal {
 	private renderPriorityRow(): boolean {
 		if (!this.props.hasPriority) return false;
 		const priority = this.props.priority;
-		if (!priority) return false;
 
 		const rowEl = this.groupEl.createDiv({ cls: "pmb-ts-row" });
-		rowEl.style.setProperty(
-			"--pmb-td-priority-color",
-			`var(--pmb-td-priority-${priority.toLowerCase()})`,
-		);
-		setIcon(
-			rowEl.createSpan({ cls: "pmb-ts-row-icon pmb-ts-row-icon-priority" }),
-			"lucide-flag",
-		);
-		rowEl.createSpan({
-			cls: "pmb-ts-row-value pmb-ts-row-value-priority",
-			text: `Priority ${priority.slice(1)}`,
-		});
+		rowEl.toggleClass("pmb-ts-row-empty", !priority);
+		if (priority) {
+			rowEl.style.setProperty(
+				"--pmb-td-priority-color",
+				`var(--pmb-td-priority-${priority.toLowerCase()})`,
+			);
+		}
+		const iconEl = rowEl.createSpan({ cls: "pmb-ts-row-icon" });
+		iconEl.toggleClass("pmb-ts-row-icon-priority", !!priority);
+		setIcon(iconEl, "lucide-flag");
+		const valueEl = rowEl.createSpan({ cls: "pmb-ts-row-value" });
+		valueEl.toggleClass("pmb-ts-row-value-priority", !!priority);
+		valueEl.setText(priority ? `Priority ${priority.slice(1)}` : "Priority");
 		rowEl.addEventListener("click", (event: MouseEvent) => {
 			this.props.showPriorityMenu(event, () => this.renderGroup());
 		});

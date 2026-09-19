@@ -988,6 +988,7 @@
 	width: 390px;
 	max-width: calc(100vw - 32px);
 	height: auto;
+	min-height: 450px;
 	max-height: 85vh;
 	border-radius: 32px;
 }
@@ -996,6 +997,11 @@
 	gap: 20px;
 	padding: 20px 20px 24px;
 	overflow-y: auto;
+}
+
+.pmb-task-sheet .pmb-td-description {
+	flex: 0 0 auto;
+	min-height: 100px;
 }
 
 .pmb-ts-handle-wrap {

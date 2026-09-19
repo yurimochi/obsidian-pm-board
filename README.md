@@ -281,18 +281,19 @@ button of its own; Escape or clicking outside it, Obsidian's own modal
 behaviour, is how it closes.
 
 **On mobile**, it's a bottom-sheet-styled summary instead, from its own
-design handoff: a drag handle and a close/more header above a grouped card
-of property rows — title (with a status ring, coloured only once the `due`
-date is in the past), Project, Due, Priority, and Tags, each row tappable
-to edit the same way as the desktop panel's pills. Due and Priority rows
-are left out entirely while unset, matching that design exactly (unlike
-desktop's always-shown pills); there's no affordance in this sheet to add
-either back once removed (the design doesn't specify one), so setting
-either from scratch still means editing the note's frontmatter directly.
-Unlike desktop, there is no description field here either — this design
-doesn't have one, matching the original screen's own fields exactly. The
-full note is still one tap away regardless, either through a long-press
-card menu's **Open**, or another **Card Detail** setting.
+design handoff, since adjusted for parity with desktop: a drag handle and a
+close/more header (at least 450px tall, though it grows past that with a
+long description, up to 85% of the viewport before it scrolls internally),
+a description field the same as desktop's, and a grouped card of property
+rows — title (with a status ring, coloured only once the `due` date is in
+the past), Project, Due, Priority, and Tags, each row tappable to edit the
+same way as the desktop panel's pills. All rows always show, even unset
+(muted, same as desktop), rather than the original handoff's omit-when-empty
+treatment. The header's "..." opens the note itself in the active pane
+(the same as a long-press card menu's **Open**) rather than the handoff's
+placeholder with no action, which is also how to reach anything this sheet
+doesn't cover — arbitrary frontmatter, Obsidian's own Properties widget,
+the rest of the note.
 
 ## Known gaps
 
