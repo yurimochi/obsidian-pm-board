@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, columnDateLabel, isoDate, nextWeekStart } from "../src/schedule";
+import { addDays, columnDateLabel, dayMonthLabel, isoDate, nextWeekStart } from "../src/schedule";
 
 // Dates are built with the local-time constructor (not an ISO string), so
 // these stay correct under any CI runner's timezone; addDays/nextWeekStart
@@ -87,5 +87,19 @@ describe("columnDateLabel", () => {
 
 	it("crosses a year boundary", () => {
 		expect(columnDateLabel("2026-01-01", today, tomorrow)).toBe("01 Jan • Thu");
+	});
+});
+
+describe("dayMonthLabel", () => {
+	it("formats a date without a leading zero on the day", () => {
+		expect(dayMonthLabel("2026-09-09")).toBe("9 Sep");
+	});
+
+	it("does not pad a two-digit day either", () => {
+		expect(dayMonthLabel("2026-09-14")).toBe("14 Sep");
+	});
+
+	it("returns the raw text unchanged when it doesn't parse as a date", () => {
+		expect(dayMonthLabel("not-a-date")).toBe("not-a-date");
 	});
 });

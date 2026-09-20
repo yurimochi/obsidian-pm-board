@@ -38,6 +38,18 @@ const MONTH_ABBR = [
 ];
 
 /**
+ * "14 Sep" (no leading zero on the day) from an ISO-ish date string, for an
+ * Overdue card's own date row — its own design, distinct from the padded
+ * "01 Sep" a column header uses. The raw text itself stands in for anything
+ * that doesn't parse as a date, rather than showing nothing.
+ */
+export function dayMonthLabel(dateText: string): string {
+	const date = new Date(dateText);
+	if (Number.isNaN(date.getTime())) return dateText;
+	return `${date.getUTCDate()} ${MONTH_ABBR[date.getUTCMonth()]}`;
+}
+
+/**
  * A date column's header label: "17 Sep • Wed", swapping the weekday for
  * "Today" or "Tomorrow" when the column matches one. `today` and `tomorrow`
  * are taken as given rather than derived from `columnDate` here, since

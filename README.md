@@ -78,13 +78,22 @@ Both the property and the chosen value are written to the board's own
 settings, the same as a collapsed column or a WIP limit, so the filter is
 still applied the next time the board opens.
 
+On desktop, the trigger stays in view while scrolling the board
+horizontally: `.pmb-board` is what actually scrolls sideways there (there's
+no separate horizontal scroll container for the column row, unlike
+mobile's own carousel), so the header sticks to the left edge of the
+scrolled view instead of scrolling away with the columns.
+
 ## Cards
 
 A card leads with a status ring — a plain outline, or a fillable checkbox
 when a boolean property is configured — followed by its title. Above that,
 when configured, sits a project name and a priority badge; below, a row of
-tag chips and any other visible properties. A card in the Overdue column
-also carries its own date, since the column itself no longer names one.
+tag chips and any other visible properties, except `card_order` — the
+manual drag order is bookkeeping, never shown as a chip even if a view's
+own property list includes it. A card in the Overdue column also carries
+its own date ("14 Sep", no padded day), since the column itself no longer
+names one.
 
 The board's colours are fixed, not derived from the installed Obsidian
 theme: a light and a dark palette baked into the plugin, switching with

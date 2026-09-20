@@ -7,7 +7,8 @@ import {
 	setIcon,
 	Value,
 } from "obsidian";
-import { BoardConfig } from "./board-config";
+import { BoardConfig, LEGACY_ORDER_PROPERTY } from "./board-config";
+import { frontmatterKeyOf } from "./frontmatter";
 import { PriorityLabel, priorityOf } from "./priority";
 import { normaliseTagName } from "./tag-colors";
 
@@ -53,6 +54,9 @@ function collectCardParts(
 		// Project and priority get their own row above, not a generic chip.
 		if (propId === config.projectProperty) continue;
 		if (propId === config.priorityProperty) continue;
+		// The manual drag order is bookkeeping, not something to show at all.
+		const key = frontmatterKeyOf(propId);
+		if (key === config.orderProperty || key === LEGACY_ORDER_PROPERTY) continue;
 		const value = entry.getValue(propId);
 		if (!value) continue;
 		if (propId === TAGS_PROPERTY) {

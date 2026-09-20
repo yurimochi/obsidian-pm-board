@@ -54,7 +54,7 @@ import {
 	sortByOrderKey,
 } from "./order";
 import { PromptModal } from "./prompt-modal";
-import { addDays, columnDateLabel, isoDate, nextWeekStart } from "./schedule";
+import { addDays, columnDateLabel, dayMonthLabel, isoDate, nextWeekStart } from "./schedule";
 import {
 	buildLanes,
 	filterLaneEntries,
@@ -464,13 +464,14 @@ export class BoardView extends BasesView {
 			? (groupByPropertyOf(this.config) as BasesPropertyId | null)
 			: null;
 		ordered.forEach((entry, index) => {
+			const rawDue = dueDateProperty ? textValueOf(entry, dueDateProperty) : null;
 			this.renderDraggableCard(
 				cardsEl,
 				entry,
 				config,
 				properties,
 				{ ...at, index },
-				dueDateProperty ? textValueOf(entry, dueDateProperty) : null,
+				rawDue ? dayMonthLabel(rawDue) : null,
 				isOverdue,
 			);
 		});

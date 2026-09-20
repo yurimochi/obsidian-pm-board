@@ -54,8 +54,13 @@
 	--pmb-dropdown-row-hover: oklch(0.26 0.005 260);
 }
 
+/* .pmb-board is the element that actually scrolls horizontally on desktop
+   (the wide row of columns has no scroll container of its own there,
+   unlike mobile's own .pmb-lane-columns); sticky keeps the trigger in view
+   as that scrolls right, the same way .pmb-lane-title already does. */
 .pmb-filter {
-	position: relative;
+	position: sticky;
+	left: 0;
 	display: flex;
 	flex-shrink: 0;
 	align-items: center;
