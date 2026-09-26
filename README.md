@@ -146,6 +146,8 @@ Cards are focusable, so the board is reachable by tabbing into it.
 | Ctrl/Cmd + Arrow | Move the focused card between columns or up and down its own column |
 | Ctrl/Cmd + Shift + Up/Down | Move the focused card to the lane above or below |
 | Enter | Open the card's note |
+| Ctrl/Cmd + E | Edit the card — opens it the same way a plain click does |
+| Ctrl/Cmd + Backspace (or Delete) | Delete the card, after a confirmation (Enter confirms) |
 
 A move redraws the board, and focus follows the card rather than falling back
 to the document. Each move is announced to screen readers with the card's new
@@ -159,8 +161,9 @@ scroll or a swipe between columns, is left entirely to the browser; the
 board only steps in once a touch has been held still long enough to count
 as deliberate, and even then only to open the card's context menu (the same
 one described below) once the finger lifts — not while it's still held
-down. Moving a card on mobile goes through that menu's **Move to column** /
-**Move to lane** instead. This is entirely separate from the desktop
+down. Moving a card on mobile goes through that menu instead: its **Date**
+buttons on a board grouped by date, or **Move to column** / **Move to lane**
+otherwise. This is entirely separate from the desktop
 experience, which keeps its own native drag and right-click menu untouched.
 
 On a narrow screen a column sits centred with a slice of both the next and
@@ -173,27 +176,33 @@ with its content instead.
 
 ## Card menu
 
-Right-click (or long-press) a card for:
+Right-click (or long-press) a card for the menu from the design handoff: a
+glass panel at the pointer, kept inside the window, that closes on a click
+outside it (without that click also reaching the board) or Escape. The
+arrow keys walk its entries and Enter picks one.
 
-- **Edit tags** writes a comma-separated list to the note's frontmatter
-  `tags`. Inline `#tags` in the note body are read for the card's tag chips
-  but not touched here.
-- **Open**, **Open in new tab**, **Open to the side** — the same three
-  targets a plain click, Ctrl/Cmd-click and Ctrl/Cmd-Alt-click reach.
+- **Edit** (Ctrl/Cmd+E) opens the card the same way a plain click does,
+  following the view's **Card Detail** setting.
 - **Rename** edits the title in place on the card; Enter or clicking away
   saves, Escape cancels. Renames the file itself, the same as Obsidian's own
   Rename — a property standing in as the card's display title is untouched.
 - **Duplicate** copies the note into `Name-2.md`, `Name-3.md`, and so on,
   inserted right after the original in its own column.
-- **Schedule today / tomorrow / next week** write today's, tomorrow's, or
-  next Monday's date to the property the board groups by. Only appear when
-  that property holds dates, and only for the ones that would not just put
-  the card back in the column it's already in.
-- **Move to column** / **Move to lane** — the only way to move a card
-  without a pointer, on the keyboard as well as on a touch device, which
-  has no card drag of its own.
-- **Delete** moves the note to your configured trash, after a confirmation
-  that names the file.
+- **Date**: **Today**, **Tomorrow** and **Next week** (next Monday) write
+  that date to the property the board groups by when it holds dates — moving
+  the card to that column — or to the note's `due` otherwise. **More** (⋯)
+  opens the card, to pick any other date there.
+- **Priority**: four flags, P1 (red) through P4 (no colour), with the card's
+  current one highlighted. Picking another sets it; picking the highlighted
+  one clears it. Written in the form the board's notes already use — a bare
+  `1`-`4` when they hold digits, `P1`-`P4` otherwise — so a Sort by on the
+  property keeps working.
+- **Move to column** / **Move to lane** — only on a board not grouped by
+  date (where Today/Tomorrow/Next week don't move a card between columns),
+  and for lanes only with swimlanes on. The way to move a card without a
+  pointer on a touch device, which has no card drag of its own.
+- **Delete** (Ctrl/Cmd+Backspace) moves the note to your configured trash,
+  after a confirmation that names the file.
 
 ## New cards
 
@@ -262,7 +271,7 @@ Overdue is worked out fresh from each card's own date on every redraw, not a
 value stored anywhere, so a card can't be dragged, moved, or added straight
 into it the way it could a real column — it leaves once its date does,
 scheduling it forward the usual way (drag it to a later column, or use the
-card menu's Schedule actions). Renaming, WIP limits, colour, and delete all
+card menu's Date buttons). Renaming, WIP limits, colour, and delete all
 still work on it like any other column.
 
 ## Card detail
@@ -315,8 +324,8 @@ distinct from the property card's). The whole sheet is at least 450px
 tall, growing past that for longer content, up to 85% of the viewport
 before it scrolls internally. All rows always show, even unset (muted),
 rather than the handoffs' own omit-when-empty treatment, and the header's
-"..." opens the note itself in the active pane (the same as a long-press
-card menu's **Open**) rather than sitting unwired — both intentional
+"..." opens the note itself in the active pane rather than sitting
+unwired — both intentional
 departures from the handoffs, for parity with the desktop panel and so
 every field stays reachable from the sheet itself.
 
@@ -346,8 +355,8 @@ above it while the field is focused, scrolling the field into that space.
   keyboard path to toggle it yet.
 - **Touch drag was tried and removed.** It kept fighting ordinary scrolling
   and swiping between columns, even after a rework meant to fix that; moving
-  a card on mobile now goes through the card menu's Move to column/lane
-  instead, same as the keyboard does. The simplified long-press-to-menu
+  a card on mobile now goes through the card menu instead (its Date
+  buttons, or Move to column/lane on a board not grouped by date). The simplified long-press-to-menu
   gesture that replaced it is unverified in a real vault.
 - **Column drag-to-reorder has no touch or keyboard alternative.** Unlike
   moving a card, there is no menu fallback yet; on a touch device or from

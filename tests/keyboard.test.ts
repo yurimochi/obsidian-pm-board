@@ -47,6 +47,19 @@ describe("keyAction", () => {
 		expect(keyAction(chord("ArrowLeft", true, true))).toBeNull();
 	});
 
+	it("edits on the modifier plus E", () => {
+		expect(keyAction(chord("e", true))).toEqual({ kind: "edit" });
+		expect(keyAction(chord("E", true))).toEqual({ kind: "edit" });
+		expect(keyAction(chord("e"))).toBeNull();
+		expect(keyAction(chord("e", true, true))).toBeNull();
+	});
+
+	it("deletes on the modifier plus Backspace or Delete", () => {
+		expect(keyAction(chord("Backspace", true))).toEqual({ kind: "delete" });
+		expect(keyAction(chord("Delete", true))).toEqual({ kind: "delete" });
+		expect(keyAction(chord("Backspace"))).toBeNull();
+	});
+
 	it("ignores keys the board does not claim", () => {
 		expect(keyAction(chord("a"))).toBeNull();
 		expect(keyAction(chord("Escape"))).toBeNull();

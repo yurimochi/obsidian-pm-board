@@ -38,6 +38,8 @@ export class ConfirmModal extends Modal {
 			text: this.options.cta ?? "Confirm",
 		});
 		confirmEl.addEventListener("click", () => this.settle(true));
+		// Focused so a keyboard-triggered delete (Cmd+Backspace) confirms with Enter too.
+		confirmEl.focus();
 	}
 
 	onClose(): void {

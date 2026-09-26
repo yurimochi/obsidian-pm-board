@@ -1192,3 +1192,249 @@
 	color: var(--pmb-td-muted-3);
 	font-size: 14px;
 }
+
+/* Card context menu, from the design handoff. It lives on the document body
+   rather than inside .pmb-board (so it can sit above everything at the
+   pointer), which means it can't inherit --pmb-* and re-declares its own
+   small palette, the same way the task-detail floatings do. The night values
+   are the handoff's own; the day ones follow the board's day dropdown. */
+.pmb-menu {
+	--pmb-menu-bg: rgba(255, 255, 255, 0.92);
+	--pmb-menu-border: oklch(0.88 0.005 260);
+	--pmb-menu-hover: oklch(0.92 0.005 260);
+	--pmb-menu-divider: oklch(0.9 0.005 260);
+	--pmb-menu-text: #1a1a1a;
+	--pmb-menu-muted: #6a6a6a;
+	--pmb-menu-active-bg: oklch(0.95 0.005 260);
+	--pmb-menu-active-border: oklch(0.82 0.005 260);
+	--pmb-menu-dot: #6a6a6a;
+	--pmb-menu-accent: #e2735a;
+	--pmb-menu-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+	position: fixed;
+	z-index: var(--layer-menu, 65);
+	display: flex;
+	flex-direction: column;
+	width: 220px;
+	max-height: calc(100vh - 16px);
+	overflow-y: auto;
+	padding: 6px;
+	box-sizing: border-box;
+	background: var(--pmb-menu-bg);
+	backdrop-filter: blur(20px) saturate(160%);
+	-webkit-backdrop-filter: blur(20px) saturate(160%);
+	border: 1px solid var(--pmb-menu-border);
+	border-radius: 12px;
+	box-shadow: var(--pmb-menu-shadow);
+	color: var(--pmb-menu-text);
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+	font-size: 13px;
+	line-height: normal;
+	outline: none;
+}
+
+.theme-dark .pmb-menu {
+	--pmb-menu-bg: oklch(0.2 0.005 260 / 0.92);
+	--pmb-menu-border: oklch(0.34 0.005 260);
+	--pmb-menu-hover: oklch(0.3 0.005 260);
+	--pmb-menu-divider: oklch(0.32 0.005 260);
+	--pmb-menu-text: #f2f2f2;
+	--pmb-menu-muted: #9a9a9a;
+	--pmb-menu-active-bg: oklch(0.26 0.005 260);
+	--pmb-menu-active-border: oklch(0.4 0.005 260);
+	--pmb-menu-dot: #c9c9c9;
+	--pmb-menu-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Transparent, behind the menu: takes the click that closes it so that click
+   can't also land on the board underneath. */
+.pmb-menu-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: var(--layer-menu, 65);
+}
+
+.pmb-menu-item {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 10px;
+	padding: 7px 10px;
+	border-radius: 6px;
+	cursor: pointer;
+	outline: none;
+}
+
+.pmb-menu-item:hover,
+.pmb-menu-item:focus-visible,
+.pmb-menu-cell:hover,
+.pmb-menu-cell:focus-visible {
+	background-color: var(--pmb-menu-hover);
+}
+
+.pmb-menu-item-label {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pmb-menu-item-warning {
+	color: var(--pmb-menu-accent);
+}
+
+.pmb-menu-item-check {
+	color: var(--pmb-menu-accent);
+}
+
+.pmb-menu-item-hint {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	color: var(--pmb-menu-muted);
+	font-size: 12px;
+}
+
+.pmb-menu-key-glyph {
+	width: 14px;
+	height: 12px;
+	margin-left: 2px;
+}
+
+.pmb-menu-label {
+	flex-shrink: 0;
+	padding: 6px 10px 2px;
+	color: var(--pmb-menu-muted);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+
+.pmb-menu-separator {
+	flex-shrink: 0;
+	height: 1px;
+	margin: 5px 10px;
+	background-color: var(--pmb-menu-divider);
+}
+
+.pmb-menu-section {
+	display: flex;
+	flex-shrink: 0;
+	flex-direction: column;
+	gap: 6px;
+	padding: 6px 10px 4px;
+}
+
+.pmb-menu-section-title {
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.pmb-menu-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 4px;
+}
+
+.pmb-menu-cell {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 40px;
+	box-sizing: border-box;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	cursor: pointer;
+	outline: none;
+}
+
+.pmb-menu-cell-active {
+	border-color: var(--pmb-menu-active-border);
+	background-color: var(--pmb-menu-active-bg);
+}
+
+.pmb-menu-icon {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+}
+
+.pmb-menu-icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.pmb-menu-cell .pmb-menu-icon {
+	width: 22px;
+	height: 22px;
+}
+
+.pmb-menu-cell .pmb-menu-icon-p1,
+.pmb-menu-cell .pmb-menu-icon-p2,
+.pmb-menu-cell .pmb-menu-icon-p3,
+.pmb-menu-cell .pmb-menu-icon-p4 {
+	width: 20px;
+	height: 20px;
+}
+
+/* Fixed hues from the handoff, the same in both themes. */
+.pmb-menu-icon-today {
+	color: #22a55b;
+}
+
+.pmb-menu-icon-tomorrow {
+	color: #f59e0b;
+}
+
+.pmb-menu-icon-next-week {
+	color: #a78bfa;
+}
+
+.pmb-menu-icon-p1 {
+	color: #e2735a;
+}
+
+.pmb-menu-icon-p2 {
+	color: #f97316;
+}
+
+.pmb-menu-icon-p3 {
+	color: #eab308;
+}
+
+/* P1-P3 are solid flags; P4 stays an outline, "no colour". */
+.pmb-menu-icon-p4 {
+	color: #7a7a7a;
+}
+
+.pmb-menu-icon-p1 .pmb-menu-flag,
+.pmb-menu-icon-p2 .pmb-menu-flag,
+.pmb-menu-icon-p3 .pmb-menu-flag {
+	fill: currentColor;
+}
+
+/* Today's calendar carries the day of the month inside it. */
+.pmb-menu-icon-day {
+	fill: currentColor;
+	stroke: none;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+	font-size: 9px;
+}
+
+.pmb-menu-cell .pmb-menu-icon-more {
+	gap: 3px;
+	width: auto;
+}
+
+.pmb-menu-more-dot {
+	width: 8px;
+	height: 8px;
+	box-sizing: border-box;
+	border: 1.5px solid var(--pmb-menu-dot);
+	border-radius: 50%;
+}

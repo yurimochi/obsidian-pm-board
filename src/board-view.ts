@@ -30,6 +30,7 @@ import {
 	setListFilter,
 } from "./board-config";
 import { cardTitle, renderCard, valuesOf } from "./card";
+import { CardMenu } from "./card-menu";
 import { groupKeyOf, sortGroups } from "./column-order";
 import { ConfirmModal } from "./confirm-modal";
 import { BOARD_VIEW_TYPE } from "./constants";
@@ -44,6 +45,7 @@ import {
 	moveTarget,
 } from "./keyboard";
 import { OpenModifiers, resolveOpenTarget } from "./open-behavior";
+import { PRIORITY_LABELS, PriorityLabel, priorityOf, priorityWriteValue } from "./priority";
 import {
 	adjustIndexForRemoval,
 	columnInsertionIndexAt,
@@ -64,9 +66,9 @@ import {
 	OVERDUE_COLUMN_KEY,
 } from "./swimlanes";
 import { applyPlaceholders, joinPath, uniqueName } from "./template";
-import { parseTagList } from "./tag-colors";
 import { TaskDetailModal } from "./task-detail-modal";
 import { TaskDetailSheet } from "./task-detail-sheet";
+import { DUE_PROPERTY } from "./task-properties";
 
 /** How long a still touch is held before it counts as a long press, opening the card menu. */
 const TOUCH_LONG_PRESS_MS = 450;
@@ -112,6 +114,8 @@ export class BoardView extends BasesView {
 	/** Which of the filter panel's two sections is expanded, if either; both start collapsed. */
 	private filterPanelExpanded: "property" | "filtering" | null = null;
 	private readonly renderContext: RenderContext = { hoverPopover: null };
+	/** The card menu currently open, if any; only one at a time. */
+	private cardMenu: CardMenu | null = null;
 
 	constructor(
 		private readonly controller: QueryController,
@@ -155,6 +159,7 @@ export class BoardView extends BasesView {
 	}
 
 	onunload(): void {
+		this.cardMenu?.close();
 		this.boardEl?.detach();
 		this.liveEl?.detach();
 		this.boardEl = null;
@@ -1318,8 +1323,13 @@ export class BoardView extends BasesView {
 		if (!action) return;
 		event.preventDefault();
 
-		if (action.kind === "open") {
+		if (action.kind === "open" || action.kind === "edit") {
 			this.openEntry(entry, config, { mod: false, alt: false });
+			return;
+		}
+
+		if (action.kind === "delete") {
+			this.report(this.deleteCard(entry), "Could not delete the card.");
 			return;
 		}
 
@@ -1335,6 +1345,13 @@ export class BoardView extends BasesView {
 		this.report(this.moveToPosition(entry, config, target), "Could not move the card.");
 	}
 
+	/**
+	 * The card menu from the design handoff: Edit, Rename and Duplicate, a
+	 * Date grid (Today / Tomorrow / Next week, and "More", which opens the
+	 * card to pick any other date), a Priority grid, then Delete. A board not
+	 * grouped by date keeps "Move to column" too, since there the date
+	 * buttons don't move a card between columns.
+	 */
 	private showCardMenu(
 		position: { x: number; y: number },
 		entry: BasesEntry,
@@ -1342,150 +1359,133 @@ export class BoardView extends BasesView {
 		at: BoardPosition,
 		cardEl: HTMLElement,
 	): void {
-		const menu = new Menu();
-		const lane = this.lanes[at.lane];
-		const column = lane.columns[at.column];
-		const groupProperty = groupByPropertyOf(this.config);
-		const scheduleKey = groupProperty ? frontmatterKeyOf(groupProperty) : null;
+		this.cardMenu?.close();
+		const menu = new CardMenu(cardEl.doc);
+		this.cardMenu = menu;
+		menu.onClose = () => {
+			if (this.cardMenu === menu) this.cardMenu = null;
+		};
+		const edit = (): void => this.openEntry(entry, config, { mod: false, alt: false });
 
-		menu.addItem((item) =>
-			item
-				.setTitle("Edit tags")
-				.setIcon("lucide-tags")
-				.onClick(() => this.report(this.editTags(entry), "Could not edit tags.")),
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle("Open")
-				.setIcon("lucide-file")
-				.onClick(() => this.openEntry(entry, config, { mod: false, alt: false })),
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle("Open in new tab")
-				.setIcon("lucide-file-plus")
-				.onClick(() => this.openEntry(entry, config, { mod: true, alt: false })),
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle("Open to the side")
-				.setIcon("lucide-separator-vertical")
-				.onClick(() => this.openEntry(entry, config, { mod: true, alt: true })),
-		);
-
+		menu.addItem({ label: "Edit", icon: "edit", shortcut: "E", onClick: edit });
 		menu.addSeparator();
-		menu.addItem((item) =>
-			item
-				.setTitle("Rename")
-				.setIcon("lucide-pencil")
-				.onClick(() => this.startRename(cardEl, entry)),
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle("Duplicate")
-				.setIcon("lucide-copy")
-				.onClick(() =>
-					this.report(
-						this.duplicateCard(entry, config, at),
-						"Could not duplicate the card.",
-					),
-				),
-		);
+		menu.addItem({ label: "Rename", onClick: () => this.startRename(cardEl, entry) });
+		menu.addItem({
+			label: "Duplicate",
+			onClick: () =>
+				this.report(this.duplicateCard(entry, config, at), "Could not duplicate the card."),
+		});
+		menu.addSeparator();
 
-		if (this.dateGrouped && scheduleKey) {
+		const scheduleKey = this.scheduleKey();
+		if (scheduleKey) {
 			const now = new Date();
-			const currentKey = column?.key ?? null;
-			const candidates: [string, Date][] = [
-				["Schedule today", now],
-				["Schedule tomorrow", addDays(now, 1)],
-				["Schedule next week", nextWeekStart(now)],
-			];
-			const targets = candidates.filter(([, date]) => isoDate(date) !== currentKey);
-
-			if (targets.length > 0) {
-				menu.addSeparator();
-				for (const [title, date] of targets) {
-					menu.addItem((item) =>
-						item
-							.setTitle(title)
-							.setIcon("lucide-calendar")
-							.onClick(() =>
-								this.report(
-									this.scheduleCard(entry, scheduleKey, date),
-									"Could not reschedule the card.",
-								),
-							),
-					);
-				}
-			}
+			const scheduleTo = (date: Date) => (): void =>
+				this.report(
+					this.scheduleCard(entry, scheduleKey, date),
+					"Could not reschedule the card.",
+				);
+			menu.addGrid("Date", [
+				{ title: "Today", icon: "today", onClick: scheduleTo(now) },
+				{ title: "Tomorrow", icon: "tomorrow", onClick: scheduleTo(addDays(now, 1)) },
+				{ title: "Next week", icon: "next-week", onClick: scheduleTo(nextWeekStart(now)) },
+				{ title: "More", icon: "more", onClick: edit },
+			]);
 		}
 
-		menu.addSeparator();
-		menu.addItem((item) => item.setIsLabel(true).setTitle("Move to column"));
-		lane.columns.forEach((col, index) => {
-			// Overdue is computed fresh from every other column's own date, so
-			// it isn't itself a place to move a card to.
-			if (col.key === OVERDUE_COLUMN_KEY) return;
-			menu.addItem((item) =>
-				item
-					.setTitle(col.key ?? NO_VALUE_COLLAPSE_KEY)
-					.setChecked(index === at.column)
-					.onClick(() => {
+		const priorityKey = frontmatterKeyOf(config.priorityProperty);
+		if (priorityKey) {
+			const current = priorityOf(entry.getValue(config.priorityProperty)?.toString().trim());
+			menu.addGrid(
+				"Priority",
+				PRIORITY_LABELS.map((label) => ({
+					title: label,
+					icon: label,
+					active: label === current,
+					// The grid has no separate "none": picking the priority a
+					// card already has clears it instead.
+					onClick: () =>
+						this.report(
+							this.setCardPriority(
+								entry,
+								priorityKey,
+								label === current ? null : label,
+							),
+							"Could not update the priority.",
+						),
+				})),
+			);
+		}
+
+		const lane = this.lanes[at.lane];
+		if (!this.dateGrouped && lane) {
+			menu.addSeparator();
+			menu.addLabel("Move to column");
+			lane.columns.forEach((col, index) => {
+				menu.addItem({
+					label: col.key ?? NO_VALUE_COLLAPSE_KEY,
+					checked: index === at.column,
+					onClick: () => {
 						if (index === at.column) return;
 						this.moveTo(entry, config, {
 							lane: at.lane,
 							column: index,
 							index: col.entries.length,
 						});
-					}),
-			);
-		});
+					},
+				});
+			});
+		}
 
 		if (config.swimlaneProperty && this.lanes.length > 1) {
 			menu.addSeparator();
-			menu.addItem((item) => item.setIsLabel(true).setTitle("Move to lane"));
+			menu.addLabel("Move to lane");
 			this.lanes.forEach((target, index) => {
 				const size = target.columns[at.column]?.entries.length ?? 0;
-				menu.addItem((item) =>
-					item
-						.setTitle(target.key ?? NO_VALUE_COLLAPSE_KEY)
-						.setChecked(index === at.lane)
-						.onClick(() => {
-							if (index === at.lane) return;
-							this.moveTo(entry, config, {
-								lane: index,
-								column: at.column,
-								index: size,
-							});
-						}),
-				);
+				menu.addItem({
+					label: target.key ?? NO_VALUE_COLLAPSE_KEY,
+					checked: index === at.lane,
+					onClick: () => {
+						if (index === at.lane) return;
+						this.moveTo(entry, config, { lane: index, column: at.column, index: size });
+					},
+				});
 			});
 		}
 
 		menu.addSeparator();
-		menu.addItem((item) =>
-			item
-				.setTitle("Delete")
-				.setIcon("lucide-trash-2")
-				.onClick(() => this.report(this.deleteCard(entry), "Could not delete the card.")),
-		);
+		menu.addItem({
+			label: "Delete",
+			icon: "delete",
+			shortcut: "Backspace",
+			warning: true,
+			onClick: () => this.report(this.deleteCard(entry), "Could not delete the card."),
+		});
 
-		menu.showAtPosition(position);
+		menu.showAt(position, cardEl);
 	}
 
-	private async editTags(entry: BasesEntry): Promise<void> {
-		const current = parseTagList(this.rawValue(entry, "tags"));
-		const next = await PromptModal.prompt(this.app, {
-			title: "Edit tags",
-			initialValue: current.join(", "),
-			placeholder: "task, bug, ...",
-		});
-		if (next === null) return;
+	/**
+	 * Where the menu's Today / Tomorrow / Next week write: the property the
+	 * board groups by when that's a date, so the card moves to that column;
+	 * otherwise the task's own `due`, the same one its detail view edits.
+	 */
+	private scheduleKey(): string | null {
+		if (!this.dateGrouped) return DUE_PROPERTY;
+		const groupProperty = groupByPropertyOf(this.config);
+		return groupProperty ? frontmatterKeyOf(groupProperty) : null;
+	}
 
-		const tags = parseTagList(next);
+	/** Writes in whatever form the board's cards already use (see priorityWriteValue). */
+	private async setCardPriority(
+		entry: BasesEntry,
+		key: string,
+		label: PriorityLabel | null,
+	): Promise<void> {
+		const samples = this.data.data.map((candidate) => this.rawValue(candidate, key));
 		await this.writeFrontMatter(entry.file.path, (frontmatter) => {
-			if (tags.length > 0) frontmatter.tags = tags;
-			else delete frontmatter.tags;
+			if (label) frontmatter[key] = priorityWriteValue(label, samples);
+			else delete frontmatter[key];
 		});
 	}
 

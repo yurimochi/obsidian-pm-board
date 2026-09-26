@@ -14,3 +14,19 @@ export function priorityOf(text: string | null | undefined): PriorityLabel | nul
 	if (/^[1-4]$/.test(upper)) return `P${upper}` as PriorityLabel;
 	return null;
 }
+
+/**
+ * The frontmatter value to write for a priority, matching how the vault
+ * already stores it: a bare number once existing notes hold `1`-`4`, since
+ * mixing numbers with "P1"-style text would split a Sort by on the property
+ * in two; the "P1" label otherwise, including when nothing is stored yet.
+ */
+export function priorityWriteValue(
+	label: PriorityLabel,
+	samples: unknown[],
+): number | PriorityLabel {
+	const sample = samples.find((value) => value !== null && value !== undefined && value !== "");
+	const numeric =
+		typeof sample === "number" || (typeof sample === "string" && /^[1-4]$/.test(sample.trim()));
+	return numeric ? Number(label.slice(1)) : label;
+}

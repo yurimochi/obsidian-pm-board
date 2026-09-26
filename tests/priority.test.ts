@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { priorityOf } from "../src/priority";
+import { priorityOf, priorityWriteValue } from "../src/priority";
 
 describe("priorityOf", () => {
 	it("accepts the four expected labels", () => {
@@ -30,5 +30,21 @@ describe("priorityOf", () => {
 		expect(priorityOf(null)).toBeNull();
 		expect(priorityOf(undefined)).toBeNull();
 		expect(priorityOf("")).toBeNull();
+	});
+});
+
+describe("priorityWriteValue", () => {
+	it("writes a bare number when the vault stores digits", () => {
+		expect(priorityWriteValue("P2", [null, 1])).toBe(2);
+		expect(priorityWriteValue("P1", ["3"])).toBe(1);
+	});
+
+	it("writes the label when the vault stores labels", () => {
+		expect(priorityWriteValue("P3", ["P1"])).toBe("P3");
+	});
+
+	it("falls back to the label when nothing is stored yet", () => {
+		expect(priorityWriteValue("P4", [])).toBe("P4");
+		expect(priorityWriteValue("P4", [null, undefined, ""])).toBe("P4");
 	});
 });

@@ -7,6 +7,8 @@ export interface KeyChord {
 
 export type KeyAction =
 	| { kind: "open" }
+	| { kind: "edit" }
+	| { kind: "delete" }
 	| { kind: "focus"; direction: FocusDirection }
 	| { kind: "move"; direction: MoveDirection };
 
@@ -26,6 +28,13 @@ const ARROWS: Record<string, FocusDirection> = {
  */
 export function keyAction(chord: KeyChord): KeyAction | null {
 	if (chord.key === "Enter") return { kind: "open" };
+
+	// The card menu's own shortcuts: Cmd/Ctrl+E edits, Cmd/Ctrl+Backspace
+	// (macOS's "delete" key) or Delete trashes the card.
+	if (chord.mod && !chord.shift) {
+		if (chord.key.toLowerCase() === "e") return { kind: "edit" };
+		if (chord.key === "Backspace" || chord.key === "Delete") return { kind: "delete" };
+	}
 
 	const direction = ARROWS[chord.key];
 	if (!direction) return null;
