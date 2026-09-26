@@ -11,6 +11,22 @@ export function frontmatterKeyOf(property: string): string | null {
 }
 
 /**
+ * A wikilink's display text — its alias if it has one, otherwise the
+ * linked note's own name, dropping any heading/block reference — since a
+ * property like project is commonly a link to the project's own note
+ * rather than plain text, and showing the raw `[[...]]` syntax isn't the
+ * "reference" a link property actually holds.
+ */
+export function resolveLink(raw: string): string {
+	const match = /^\[\[([^\]]+)\]\]$/.exec(raw);
+	if (!match) return raw;
+	const [target, alias] = match[1].split("|");
+	if (alias) return alias.trim();
+	const withoutHeading = target.split("#")[0];
+	return (withoutHeading.split("/").pop() || withoutHeading).trim();
+}
+
+/**
  * The value to write for a column, given the raw frontmatter value of a note
  * already in it. Column keys reach the board as text, so writing them back
  * blindly would turn a boolean or number property into a string and drop the

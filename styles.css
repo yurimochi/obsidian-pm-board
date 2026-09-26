@@ -23,7 +23,7 @@
 	--pmb-priority-p3: #eab308;
 	--pmb-priority-p4: #9a9a9a;
 	--pmb-priority-text: #1a1a1a;
-	--pmb-radius-card: 14px;
+	--pmb-radius-card: 19px;
 	--pmb-radius-s: 6px;
 	--pmb-radius-m: 8px;
 
@@ -36,6 +36,10 @@
 	box-sizing: border-box;
 	background-color: var(--pmb-bg);
 	color: var(--pmb-text);
+	/* The design's own system font stack, fixed for the same reason as the
+	   palette: an interface font picked in the theme or settings (Inter, say)
+	   shouldn't reshape the board. */
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 .theme-dark .pmb-board {
@@ -294,12 +298,16 @@
 	max-height: none;
 }
 
+/* line-height: the design's rows are measured at the browser's normal line
+   height rather than Obsidian's looser body default; the few elements that
+   set their own (the card title) still do. */
 .pmb-column {
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
 	flex: 0 0 var(--pmb-column-width, 250px);
 	max-height: 100%;
+	line-height: normal;
 }
 
 .pmb-column-collapsed {
@@ -356,12 +364,15 @@
 }
 
 /* The !important overrides a host theme's own `button` background, which the
-   fixed palette is otherwise meant to be independent of. */
+   fixed palette is otherwise meant to be independent of. height: auto drops
+   Obsidian's fixed `button` height, which otherwise pins the title to the top
+   of a taller box and leaves it sitting above "+" and "Reschedule". */
 .pmb-column-toggle {
 	display: flex;
 	align-items: baseline;
 	gap: 6px;
 	min-width: 0;
+	height: auto;
 	overflow: hidden;
 	padding: 2px;
 	margin: -2px;
@@ -434,19 +445,40 @@
 
 /* The !important overrides a host theme's own `button` background, which the
    fixed palette is otherwise meant to be independent of (same issue as the
-   date column's static title). */
+   date column's static title). The negative block margin keeps the padded
+   hit area from making the header any taller than its 12px title. */
 .pmb-column-add,
 .pmb-column-menu {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	height: auto;
 	padding: 4px;
+	margin-block: -4px;
 	background-color: transparent !important;
 	border: none;
 	box-shadow: none;
 	color: var(--pmb-text-muted-1);
 	cursor: pointer;
 	border-radius: var(--pmb-radius-s);
+}
+
+/* The design's "+" is accent-coloured, at the size of the title beside it. */
+.pmb-column-add {
+	color: var(--pmb-accent);
+}
+
+.pmb-column-add svg,
+.pmb-column-menu svg {
+	width: 12px;
+	height: 12px;
+	stroke-width: 2;
+}
+
+/* Flush with the column's right edge, like the design's bare "+" and the
+   Overdue column's "Reschedule", rather than inset by the button padding. */
+.pmb-column-actions > button:last-child {
+	margin-right: -4px;
 }
 
 .pmb-column-add:hover,
@@ -569,10 +601,13 @@
 .pmb-card-project-icon svg {
 	width: 100%;
 	height: 100%;
+	stroke-width: 2;
 }
 
+/* margin-left keeps the badge on the right even on a card with no project. */
 .pmb-card-priority {
 	flex: 0 0 auto;
+	margin-left: auto;
 	color: var(--pmb-priority-text);
 	background-color: var(--pmb-priority-color);
 	font-size: 10px;
@@ -620,7 +655,7 @@
 .pmb-card-title {
 	flex: 1;
 	color: var(--pmb-text);
-	font-size: 14px;
+	font-size: 12px;
 	font-weight: 500;
 	line-height: 1.4;
 }
@@ -662,6 +697,7 @@
 .pmb-card-date-icon svg {
 	width: 100%;
 	height: 100%;
+	stroke-width: 2.2;
 }
 
 /* On a phone a column that only shows part of itself is unreadable, so one
@@ -763,7 +799,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	row-gap: 2px;
+	row-gap: 0;
 	column-gap: 6px;
 	padding-left: 24px;
 }
@@ -772,8 +808,8 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
+	padding: 1px 0;
 	font-size: 10px;
-	line-height: 1.4;
 	color: var(--pmb-tag-color, var(--pmb-text-muted-1));
 	max-width: 100%;
 	overflow: hidden;
@@ -788,9 +824,12 @@
 	height: 11px;
 }
 
+/* The design mirrors lucide's tag to point right, drawn a touch heavier. */
 .pmb-tag-icon svg {
 	width: 100%;
 	height: 100%;
+	transform: scaleX(-1);
+	stroke-width: 2.2;
 }
 
 .pmb-chip {

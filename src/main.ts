@@ -1,4 +1,5 @@
 import { Notice, Plugin } from "obsidian";
+import { DEFAULT_PRIORITY_PROPERTY, DEFAULT_PROJECT_PROPERTY } from "./board-config";
 import { BoardView } from "./board-view";
 import { BOARD_VIEW_TYPE } from "./constants";
 
@@ -20,6 +21,18 @@ export default class PmBoardPlugin extends Plugin {
 						split: "Split to the right",
 						tab: "New tab",
 					},
+				},
+				{
+					key: "projectProperty",
+					type: "property",
+					displayName: "Project",
+					default: DEFAULT_PROJECT_PROPERTY,
+				},
+				{
+					key: "priorityProperty",
+					type: "property",
+					displayName: "Priority",
+					default: DEFAULT_PRIORITY_PROPERTY,
 				},
 			],
 		});

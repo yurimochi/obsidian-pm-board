@@ -3,6 +3,8 @@ import {
 	collapseKey,
 	groupByPropertyOf,
 	DEFAULT_ORDER_PROPERTY,
+	DEFAULT_PRIORITY_PROPERTY,
+	DEFAULT_PROJECT_PROPERTY,
 	lookupColumn,
 	orderKey,
 	readBoardConfig,
@@ -61,6 +63,17 @@ describe("readBoardConfig", () => {
 		expect(config.boardColumns).toBeNull();
 		expect(config.collapsedColumns.size).toBe(0);
 		expect(config.orderProperty).toBe(DEFAULT_ORDER_PROPERTY);
+		expect(config.projectProperty).toBe(DEFAULT_PROJECT_PROPERTY);
+		expect(config.priorityProperty).toBe(DEFAULT_PRIORITY_PROPERTY);
+	});
+
+	it("reads project and priority from the view when it names its own", () => {
+		const config = readBoardConfig(
+			fakeConfig({ projectProperty: "note.area", priorityProperty: "note.rank" }),
+		);
+
+		expect(config.projectProperty).toBe("note.area");
+		expect(config.priorityProperty).toBe("note.rank");
 	});
 
 	it("rejects malformed values instead of propagating them", () => {

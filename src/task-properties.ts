@@ -1,29 +1,13 @@
 import { App, Menu, Notice, parseYaml, TFile } from "obsidian";
 import { BoardConfig } from "./board-config";
 import { HIDDEN_TAG } from "./card";
-import { frontmatterKeyOf } from "./frontmatter";
+import { frontmatterKeyOf, resolveLink } from "./frontmatter";
 import { PRIORITY_LABELS, PriorityLabel, priorityOf } from "./priority";
 import { PromptModal } from "./prompt-modal";
 import { parseTagList } from "./tag-colors";
 
 /** Fixed, like `tags`: not a per-board configurable property. */
 export const DUE_PROPERTY = "due";
-
-/**
- * A wikilink's display text — its alias if it has one, otherwise the
- * linked note's own name, dropping any heading/block reference — since a
- * property like project is commonly a link to the project's own note
- * rather than plain text, and showing the raw `[[...]]` syntax isn't the
- * "reference" a link property actually holds.
- */
-function resolveLink(raw: string): string {
-	const match = /^\[\[([^\]]+)\]\]$/.exec(raw);
-	if (!match) return raw;
-	const [target, alias] = match[1].split("|");
-	if (alias) return alias.trim();
-	const withoutHeading = target.split("#")[0];
-	return (withoutHeading.split("/").pop() || withoutHeading).trim();
-}
 
 /**
  * A frontmatter value as display text: a wikilink resolves to its display
@@ -88,11 +72,11 @@ export class TaskProperties {
 	}
 
 	private get projectKey(): string | null {
-		return this.config.projectProperty ? frontmatterKeyOf(this.config.projectProperty) : null;
+		return frontmatterKeyOf(this.config.projectProperty);
 	}
 
 	private get priorityKey(): string | null {
-		return this.config.priorityProperty ? frontmatterKeyOf(this.config.priorityProperty) : null;
+		return frontmatterKeyOf(this.config.priorityProperty);
 	}
 
 	get hasProject(): boolean {

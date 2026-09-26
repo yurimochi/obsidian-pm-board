@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coerceGroupValue, frontmatterKeyOf } from "../src/frontmatter";
+import { coerceGroupValue, frontmatterKeyOf, resolveLink } from "../src/frontmatter";
 
 describe("frontmatterKeyOf", () => {
 	it("strips the note prefix", () => {
@@ -51,5 +51,21 @@ describe("coerceGroupValue", () => {
 		expect(coerceGroupValue("5", undefined)).toBe(5);
 		expect(coerceGroupValue("Todo", undefined)).toBe("Todo");
 		expect(coerceGroupValue("2026-09-15", undefined)).toBe("2026-09-15");
+	});
+});
+
+describe("resolveLink", () => {
+	it("shows a wikilink as its note's name", () => {
+		expect(resolveLink("[[accreditation]]")).toBe("accreditation");
+		expect(resolveLink("[[Projects/accreditation]]")).toBe("accreditation");
+		expect(resolveLink("[[accreditation#Goals]]")).toBe("accreditation");
+	});
+
+	it("prefers a wikilink's alias", () => {
+		expect(resolveLink("[[Projects/kyc|KYC]]")).toBe("KYC");
+	});
+
+	it("leaves plain text untouched", () => {
+		expect(resolveLink("payments")).toBe("payments");
 	});
 });

@@ -3,12 +3,13 @@ import {
 	BasesPropertyId,
 	BooleanValue,
 	ListValue,
+	NullValue,
 	RenderContext,
 	setIcon,
 	Value,
 } from "obsidian";
 import { BoardConfig, LEGACY_ORDER_PROPERTY } from "./board-config";
-import { frontmatterKeyOf } from "./frontmatter";
+import { frontmatterKeyOf, resolveLink } from "./frontmatter";
 import { PriorityLabel, priorityOf } from "./priority";
 import { normaliseTagName } from "./tag-colors";
 
@@ -49,16 +50,22 @@ function collectCardParts(
 	// way a status circle does elsewhere; the rest still render as chips.
 	let checkbox: Value | null = null;
 	let checkboxProperty: BasesPropertyId | null = null;
+	const project = projectOf(entry, config.projectProperty);
+	const priority = priorityOf(entry.getValue(config.priorityProperty)?.toString().trim());
 	for (const propId of properties) {
 		if (propId === config.cardTitleProperty) continue;
-		// Project and priority get their own row above, not a generic chip.
+		// Project and priority get the header row above, not a generic chip —
+		// priority only once it reads as P1-P4, since a value the badge can't
+		// show would otherwise drop off the card entirely.
 		if (propId === config.projectProperty) continue;
-		if (propId === config.priorityProperty) continue;
+		if (propId === config.priorityProperty && priority) continue;
 		// The manual drag order is bookkeeping, not something to show at all.
 		const key = frontmatterKeyOf(propId);
 		if (key === config.orderProperty || key === LEGACY_ORDER_PROPERTY) continue;
 		const value = entry.getValue(propId);
-		if (!value) continue;
+		// A property the note doesn't have renders as nothing anyway; skipping
+		// it keeps an otherwise empty meta row (and its gap) off the card.
+		if (!value || value instanceof NullValue) continue;
 		if (propId === TAGS_PROPERTY) {
 			tags.push(
 				...valuesOf(value)
@@ -71,14 +78,18 @@ function collectCardParts(
 		} else chips.push(value);
 	}
 
-	const project = config.projectProperty
-		? (entry.getValue(config.projectProperty)?.toString().trim() ?? null)
-		: null;
-	const priority = config.priorityProperty
-		? priorityOf(entry.getValue(config.priorityProperty)?.toString().trim())
-		: null;
-
 	return { tags, chips, checkbox, checkboxProperty, project, priority };
+}
+
+/**
+ * A card's project as display text: every value of a list property, each
+ * link resolved to its note's name, so `[[accreditation]]` reads the same as
+ * a plain `accreditation`.
+ */
+function projectOf(entry: BasesEntry, property: BasesPropertyId): string | null {
+	const value = entry.getValue(property);
+	if (!value || value instanceof NullValue || !value.isTruthy()) return null;
+	return valuesOf(value).map(resolveLink).join(", ") || null;
 }
 
 export function renderCard(

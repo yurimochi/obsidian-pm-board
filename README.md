@@ -87,8 +87,9 @@ scrolled view instead of scrolling away with the columns.
 ## Cards
 
 A card leads with a status ring — a plain outline, or a fillable checkbox
-when a boolean property is configured — followed by its title. Above that,
-when configured, sits a project name and a priority badge; below, a row of
+when a boolean property is configured — followed by its title. Above that
+sits a header row: the card's project on the left and its priority badge on
+the right, each shown only when the note has one; below, a row of
 tag chips and any other visible properties, except `card_order` — the
 manual drag order is bookkeeping, never shown as a chip even if a view's
 own property list includes it. A card in the Overdue column also carries
@@ -98,15 +99,19 @@ names one.
 The board's colours are fixed, not derived from the installed Obsidian
 theme: a light and a dark palette baked into the plugin, switching with
 Obsidian's own light/dark appearance setting rather than a community theme's
-variables. Both task-detail floatings (see **Card detail** below) share
-this same fixed palette; only the rename/tag-edit prompts still follow
-Obsidian's native modal styling.
+variables. The font is fixed the same way — the design's own system font
+stack, not the interface font picked in Obsidian's settings. Both
+task-detail floatings (see **Card detail** below) share this same fixed
+palette; only the rename/tag-edit prompts still follow Obsidian's native
+modal styling.
 
 ### Priority
 
-Set `priorityProperty` on the view to show a coloured `P1`-`P4` badge on
-each card. Accepts `P1`-`P4` case-insensitively, or the bare digit `1`-`4`;
-anything else is treated as unset and shows no badge.
+Each card shows a coloured `P1`-`P4` badge read from the `priority`
+property, or from whichever property the view's **Priority** setting (or
+`priorityProperty`) names instead. Accepts `P1`-`P4` case-insensitively, or
+the bare digit `1`-`4`; anything else shows no badge, and stays on the card
+as an ordinary chip if the property is one of the view's visible ones.
 
 ```yaml
 views:
@@ -117,9 +122,12 @@ views:
 
 ### Projects
 
-Set `projectProperty` on the view to show a card's project as a folder icon
-plus its text value, above the title. Purely a label — filter to one project
-with the generic property filter above, using this same property.
+Each card shows its project as a folder icon plus its text value, above the
+title, read from the `project` property, or from whichever property the
+view's **Project** setting (or `projectProperty`) names instead. A link
+shows as its note's name, and a list shows every value. Purely a label —
+filter to one project with the generic property filter above, using this
+same property.
 
 ```yaml
 views:

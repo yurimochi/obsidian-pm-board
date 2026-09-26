@@ -45,13 +45,21 @@ export interface BoardConfig {
 	listFilterProperty: BasesPropertyId | null;
 	/** The value being filtered to within listFilterProperty. */
 	listFilterValue: string | null;
-	/** Property holding a card's project, shown as a chip on the card. */
-	projectProperty: BasesPropertyId | null;
+	/** Property holding a card's project, shown in the card's header row. */
+	projectProperty: BasesPropertyId;
 	/** Property holding a card's priority; expected to hold P1-P4. */
-	priorityProperty: BasesPropertyId | null;
+	priorityProperty: BasesPropertyId;
 }
 
 export const DEFAULT_ORDER_PROPERTY = "card_order";
+
+/**
+ * Read when a view doesn't name its own, so a vault that already keeps
+ * `project` and `priority` in frontmatter gets the card's header row without
+ * any per-board setup; a note without the property simply shows nothing.
+ */
+export const DEFAULT_PROJECT_PROPERTY: BasesPropertyId = "note.project";
+export const DEFAULT_PRIORITY_PROPERTY: BasesPropertyId = "note.priority";
 
 /**
  * Order property written by other board plugins. Read as a fallback so a board
@@ -78,8 +86,8 @@ export function readBoardConfig(config: BasesViewConfig): BoardConfig {
 		orderProperty: readString(config, "orderProperty") ?? DEFAULT_ORDER_PROPERTY,
 		listFilterProperty: config.getAsPropertyId("listFilterProperty"),
 		listFilterValue: readString(config, "listFilterValue"),
-		projectProperty: config.getAsPropertyId("projectProperty"),
-		priorityProperty: config.getAsPropertyId("priorityProperty"),
+		projectProperty: config.getAsPropertyId("projectProperty") ?? DEFAULT_PROJECT_PROPERTY,
+		priorityProperty: config.getAsPropertyId("priorityProperty") ?? DEFAULT_PRIORITY_PROPERTY,
 	};
 }
 
