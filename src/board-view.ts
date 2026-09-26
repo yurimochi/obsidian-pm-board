@@ -56,7 +56,14 @@ import {
 	sortByOrderKey,
 } from "./order";
 import { PromptModal } from "./prompt-modal";
-import { addDays, columnDateLabel, dayMonthLabel, isoDate, nextWeekStart } from "./schedule";
+import {
+	addDays,
+	columnDateLabel,
+	dayMonthLabel,
+	isoDate,
+	nextWeekStart,
+	parseIsoDate,
+} from "./schedule";
 import {
 	buildLanes,
 	filterLaneEntries,
@@ -1088,13 +1095,25 @@ export class BoardView extends BasesView {
 				this.pendingFocus = file.path;
 			};
 			if (Platform.isMobile) {
-				new TaskDetailSheet(this.app, file, config, onDismiss).open();
+				new TaskDetailSheet(this.app, file, config, onDismiss, this.taskDates()).open();
 			} else {
-				new TaskDetailModal(this.app, file, config, onDismiss).open();
+				new TaskDetailModal(this.app, file, config, onDismiss, this.taskDates()).open();
 			}
 			return;
 		}
 		await this.app.workspace.getLeaf(target).openFile(file);
+	}
+
+	/** Every date (YYYY-MM-DD) a card on this board is due, dotted in the date picker's calendar. */
+	private taskDates(): Set<string> {
+		const dates = new Set<string>();
+		for (const entry of this.data.data) {
+			const raw = this.rawValue(entry, DUE_PROPERTY);
+			if (raw instanceof Date) dates.add(raw.toISOString().slice(0, 10));
+			const date = typeof raw === "string" ? parseIsoDate(raw) : null;
+			if (date) dates.add(isoDate(date));
+		}
+		return dates;
 	}
 
 	/**

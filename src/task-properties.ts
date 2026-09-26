@@ -1,10 +1,9 @@
-import { App, Menu, Notice, parseYaml, TFile } from "obsidian";
+import { App, getAllTags, Notice, parseYaml, TFile } from "obsidian";
 import { BoardConfig } from "./board-config";
 import { HIDDEN_TAG } from "./card";
-import { frontmatterKeyOf, resolveLink } from "./frontmatter";
-import { PRIORITY_LABELS, PriorityLabel, priorityOf } from "./priority";
-import { PromptModal } from "./prompt-modal";
-import { parseTagList } from "./tag-colors";
+import { frontmatterKeyOf, resolveLink, shapedLike } from "./frontmatter";
+import { PriorityLabel, priorityOf, priorityWriteValue } from "./priority";
+import { normaliseTagName, parseTagList } from "./tag-colors";
 
 /** Fixed, like `tags`: not a per-board configurable property. */
 export const DUE_PROPERTY = "due";
@@ -12,12 +11,17 @@ export const DUE_PROPERTY = "due";
 /**
  * A frontmatter value as display text: a wikilink resolves to its display
  * name (see `resolveLink`); a single-item list is unwrapped, matching how
- * a property picker sometimes stores even a single value as a list; anything
- * else that isn't already text-shaped reads as "".
+ * a property picker sometimes stores even a single value as a list; a bare
+ * YAML date (`due: 2026-09-28`), which parses as a Date at UTC midnight,
+ * reads back as that YYYY-MM-DD; anything else that isn't already
+ * text-shaped reads as "".
  */
 export function textOf(value: unknown): string {
 	// Array.isArray narrows to any[], not unknown[], hence the cast.
 	const scalar = Array.isArray(value) ? (value as unknown[])[0] : value;
+	if (scalar instanceof Date) {
+		return Number.isNaN(scalar.getTime()) ? "" : scalar.toISOString().slice(0, 10);
+	}
 	if (typeof scalar !== "string" && typeof scalar !== "number") return "";
 	return resolveLink(String(scalar).trim());
 }
@@ -111,6 +115,100 @@ export class TaskProperties {
 		return this.config.tagColors.get(tag);
 	}
 
+	/**
+	 * Every project any note in the vault names under the project property,
+	 * sorted, for the project picker's list — links resolved to their note's
+	 * name, list values flattened.
+	 */
+	knownProjects(): string[] {
+		const key = this.projectKey;
+		if (!key) return [];
+		const names = new Set<string>();
+		for (const file of this.app.vault.getMarkdownFiles()) {
+			const value: unknown = this.app.metadataCache.getFileCache(file)?.frontmatter?.[key];
+			for (const item of Array.isArray(value) ? (value as unknown[]) : [value]) {
+				if (typeof item !== "string" && typeof item !== "number") continue;
+				const name = resolveLink(String(item).trim());
+				if (name) names.add(name);
+			}
+		}
+		const current = this.project;
+		if (current) names.add(current);
+		return [...names].sort((a, b) => a.localeCompare(b));
+	}
+
+	/**
+	 * Every tag used anywhere in the vault (frontmatter or inline) plus this
+	 * note's own, sorted, for the tag picker — minus the boilerplate tag
+	 * every card carries, which the picker never offers to remove.
+	 */
+	knownTags(): string[] {
+		const tags = new Set<string>(this.tags);
+		for (const file of this.app.vault.getMarkdownFiles()) {
+			const cache = this.app.metadataCache.getFileCache(file);
+			for (const tag of (cache ? getAllTags(cache) : null) ?? []) {
+				const name = normaliseTagName(tag);
+				if (name && name.toLowerCase() !== HIDDEN_TAG) tags.add(name);
+			}
+		}
+		return [...tags].sort((a, b) => a.localeCompare(b));
+	}
+
+	/**
+	 * The property's current value on this note, else on any note in the
+	 * vault, so a write can match the shape the vault already uses for it.
+	 */
+	private sampleOf(key: string): unknown {
+		const own = this.frontmatter[key];
+		if (own !== undefined && own !== null && own !== "") return own;
+		for (const file of this.app.vault.getMarkdownFiles()) {
+			const value: unknown = this.app.metadataCache.getFileCache(file)?.frontmatter?.[key];
+			if (value !== undefined && value !== null && value !== "") return value;
+		}
+		return undefined;
+	}
+
+	/** Sets or (with null) clears the project, in the shape other notes store it in. */
+	async setProject(name: string | null): Promise<void> {
+		const key = this.projectKey;
+		if (!key) return;
+		const value = name ? shapedLike(name, this.sampleOf(key)) : null;
+		await this.write((frontmatter) => {
+			if (value !== null) frontmatter[key] = value;
+			else delete frontmatter[key];
+		});
+		if (value !== null) this.frontmatter[key] = value;
+		else delete this.frontmatter[key];
+	}
+
+	/** Sets or (with null) clears the due date, as YYYY-MM-DD. */
+	async setDue(date: string | null): Promise<void> {
+		await this.write((frontmatter) => {
+			if (date) frontmatter[DUE_PROPERTY] = date;
+			else delete frontmatter[DUE_PROPERTY];
+		});
+		if (date) this.frontmatter[DUE_PROPERTY] = date;
+		else delete this.frontmatter[DUE_PROPERTY];
+	}
+
+	/**
+	 * Adds a tag the note doesn't have, or removes one it does. Works on the
+	 * full list, the hidden boilerplate tag included, so that one survives.
+	 */
+	async toggleTag(tag: string): Promise<void> {
+		const name = normaliseTagName(tag).replace(/\s+/g, "-");
+		if (!name) return;
+		const current = parseTagList(this.frontmatter.tags);
+		const next = current.includes(name)
+			? current.filter((existing) => existing !== name)
+			: [...current, name];
+		await this.write((frontmatter) => {
+			if (next.length > 0) frontmatter.tags = next;
+			else delete frontmatter.tags;
+		});
+		this.frontmatter.tags = next;
+	}
+
 	/** Renames the file to `next`, keeping it in the same folder. */
 	async renameTo(next: string): Promise<void> {
 		const folder = this.file.parent?.path ?? "";
@@ -131,97 +229,19 @@ export class TaskProperties {
 		);
 	}
 
-	/** Prompts for a new project name; returns whether anything changed. */
-	async promptProject(): Promise<boolean> {
-		const key = this.projectKey;
-		if (!key) return false;
-		const next = await PromptModal.prompt(this.app, {
-			title: "Set project",
-			initialValue: this.project,
-			placeholder: "Project name",
-			showClear: true,
-		});
-		if (next === null) return false;
-		await this.write((frontmatter) => {
-			if (next) frontmatter[key] = next;
-			else delete frontmatter[key];
-		});
-		if (next) this.frontmatter[key] = next;
-		else delete this.frontmatter[key];
-		return true;
-	}
-
-	/** Prompts for a new due date; returns whether anything changed. */
-	async promptDue(): Promise<boolean> {
-		const next = await PromptModal.prompt(this.app, {
-			title: "Set due date",
-			initialValue: this.due,
-			placeholder: "e.g. 2026-09-19",
-			showClear: true,
-		});
-		if (next === null) return false;
-		await this.write((frontmatter) => {
-			if (next) frontmatter[DUE_PROPERTY] = next;
-			else delete frontmatter[DUE_PROPERTY];
-		});
-		if (next) this.frontmatter[DUE_PROPERTY] = next;
-		else delete this.frontmatter[DUE_PROPERTY];
-		return true;
-	}
-
-	async clearDue(): Promise<void> {
-		await this.write((frontmatter) => {
-			delete frontmatter[DUE_PROPERTY];
-		});
-		delete this.frontmatter[DUE_PROPERTY];
-	}
-
-	/** Prompts for a new comma-separated tag list; returns whether anything changed. */
-	async editTags(): Promise<boolean> {
-		const next = await PromptModal.prompt(this.app, {
-			title: "Edit tags",
-			initialValue: parseTagList(this.frontmatter.tags).join(", "),
-			placeholder: "task, bug, ...",
-		});
-		if (next === null) return false;
-		const tags = parseTagList(next);
-		await this.write((frontmatter) => {
-			if (tags.length > 0) frontmatter.tags = tags;
-			else delete frontmatter.tags;
-		});
-		this.frontmatter.tags = tags;
-		return true;
-	}
-
-	/** Shows a P1-P4 + clear menu at the event's position; calls `onChange` once a pick is committed. */
-	showPriorityMenu(event: MouseEvent, onChange: () => void): void {
+	/**
+	 * Sets or (with null) clears the priority, written in the form the vault
+	 * already uses (see priorityWriteValue) so a Sort by on it keeps working.
+	 */
+	async setPriority(label: PriorityLabel | null): Promise<void> {
 		const key = this.priorityKey;
 		if (!key) return;
-		const menu = new Menu();
-		for (const label of PRIORITY_LABELS) {
-			menu.addItem((item) =>
-				item
-					.setTitle(label)
-					.setChecked(this.priority === label)
-					.onClick(() => void this.setPriority(key, label).then(onChange)),
-			);
-		}
-		menu.addSeparator();
-		menu.addItem((item) =>
-			item
-				.setTitle("Clear priority")
-				.setIcon("lucide-x")
-				.onClick(() => void this.setPriority(key, null).then(onChange)),
-		);
-		menu.showAtMouseEvent(event);
-	}
-
-	private async setPriority(key: string, label: PriorityLabel | null): Promise<void> {
+		const value = label ? priorityWriteValue(label, [this.sampleOf(key)]) : null;
 		await this.write((frontmatter) => {
-			if (label) frontmatter[key] = label;
+			if (value !== null) frontmatter[key] = value;
 			else delete frontmatter[key];
 		});
-		if (label) this.frontmatter[key] = label;
+		if (value !== null) this.frontmatter[key] = value;
 		else delete this.frontmatter[key];
 	}
 

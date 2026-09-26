@@ -862,11 +862,13 @@
 	margin-top: var(--size-4-3);
 }
 
-/* Desktop task-detail floating panel, from the design handoff. A fixed
-   light/dark palette of its own: like .pmb-board, this is meant to look the
-   same whatever Obsidian theme is installed, but it lives in a Modal
-   outside the board's own DOM, so it cannot just inherit --pmb-* from
-   .pmb-board and needs this small palette re-declared under its own names. */
+/* Task-detail floating panels (desktop popovers, mobile bottom sheets),
+   from their own design handoffs. A fixed light/dark palette of their own:
+   like .pmb-board, they're meant to look the same whatever Obsidian theme
+   is installed, but they live in a Modal outside the board's own DOM, so
+   they can't just inherit --pmb-* from .pmb-board and need this small
+   palette re-declared under its own names. Shared by both platforms, since
+   the picker colours (priority, tags) are the same on either one. */
 .pmb-task-detail {
 	--pmb-td-bg: #ffffff;
 	--pmb-td-pill-bg: #f0f0f0;
@@ -877,15 +879,33 @@
 	--pmb-td-icon: #6a6a6a;
 	--pmb-td-muted-3: #a0a0a0;
 	--pmb-td-accent: #e2735a;
-	--pmb-td-priority-p1: #e2735a;
-	--pmb-td-priority-p2: #f97316;
-	--pmb-td-priority-p3: #eab308;
-	--pmb-td-priority-p4: #9a9a9a;
 	--pmb-td-ring-idle: #5a5a5a;
+	/* The pickers' own priority colours, distinct from the board's own P1-P4
+	   badge palette (card.ts / the card menu): P2 amber and P3 blue here,
+	   orange and yellow there. */
+	--pmb-td-priority-p1: #e2735a;
+	--pmb-td-priority-p2: #f59e0b;
+	--pmb-td-priority-p3: #3b82f6;
+	--pmb-td-priority-p4: #8a8a8a;
+	--pmb-td-tag-default: #c9a227;
 	/* Mobile sheet only: the grouped property card and its tag chips sit a
 	   little apart from the general pill surface above. */
 	--pmb-td-group-bg: #ffffff;
 	--pmb-td-chip-bg: #ececec;
+	/* Popover/sheet chrome, shared by the desktop popover and the mobile
+	   bottom sheet — same surfaces, different shapes. */
+	--pmb-td-popover-bg: #ffffff;
+	--pmb-td-popover-border: #e2e2e2;
+	--pmb-td-row-hover: #f0f0f0;
+	--pmb-td-quick-hover: #f0f0f0;
+	--pmb-td-search-bg: #f7f7f7;
+	--pmb-td-search-border: #d4d4d4;
+	--pmb-td-disabled: #b0b0b0;
+	--pmb-td-empty: #8a8a8a;
+	--pmb-td-dot: #8a8a8a;
+	--pmb-td-nav: #6a6a6a;
+	--pmb-td-nav-disabled: #d0d0d0;
+	--pmb-td-popover-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
 }
 
 .theme-dark .pmb-task-detail {
@@ -899,6 +919,17 @@
 	--pmb-td-muted-3: #6f6f6f;
 	--pmb-td-group-bg: #242424;
 	--pmb-td-chip-bg: #2f2f2f;
+	--pmb-td-popover-bg: #262626;
+	--pmb-td-popover-border: #363636;
+	--pmb-td-row-hover: #333333;
+	--pmb-td-quick-hover: #303030;
+	--pmb-td-search-bg: #1f1f1f;
+	--pmb-td-search-border: #4a4a4a;
+	--pmb-td-disabled: #6f6f6f;
+	--pmb-td-dot: #c9c9c9;
+	--pmb-td-nav: #c9c9c9;
+	--pmb-td-nav-disabled: #555555;
+	--pmb-td-popover-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
 }
 
 .pmb-task-detail.modal {
@@ -927,17 +958,6 @@
 	padding: 18px 18px 14px;
 }
 
-.pmb-td-title {
-	flex-shrink: 0;
-	background: transparent;
-	border: none;
-	outline: none;
-	color: var(--pmb-td-text);
-	font-size: 20px;
-	font-weight: 600;
-	padding: 4px 6px;
-}
-
 .pmb-td-description {
 	flex: 1;
 	background-color: var(--pmb-td-pill-bg);
@@ -952,96 +972,617 @@
 	font-family: inherit;
 }
 
-.pmb-td-toolbar {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	flex-wrap: wrap;
-	flex-shrink: 0;
+/* Desktop task-detail floating, from its own design handoff: an 840px
+   panel with a bordered title, a tall description, and a row of property
+   pills that each open a picker popover above them. Scoped to
+   .pmb-td-desktop so the mobile sheet, which shares .pmb-task-detail's
+   tokens, keeps its own layout. The night values are the handoff's; the
+   day ones follow the board's own day palette. */
+/* Desktop-only chrome: title field and the popover's own drop shadow (its
+   surface, row-hover, search field, priority colours, etc. now live on the
+   shared .pmb-task-detail root above, so the mobile sheet reuses them too). */
+.pmb-td-desktop {
+	--pmb-tdd-title-bg: #f7f7f7;
+	--pmb-tdd-title-border: #e2e2e2;
+	--pmb-tdd-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
-.pmb-td-pill,
-.pmb-td-tag {
+.theme-dark .pmb-td-desktop {
+	--pmb-tdd-title-bg: #242424;
+	--pmb-tdd-title-border: #3a3a3a;
+	--pmb-tdd-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* overflow: visible lets a picker open above its pill past the panel's own
+   top edge (the date picker is taller than the description above it). */
+.pmb-td-desktop.modal {
+	width: 840px;
+	max-width: calc(100vw - 32px);
+	height: auto;
+	max-height: none;
+	padding: 0;
+	overflow: visible;
+	box-shadow: var(--pmb-tdd-shadow);
+}
+
+.pmb-td-desktop .modal-content {
+	position: relative;
+	gap: 20px;
+	height: auto;
+	padding: 64px 44px 40px;
+	overflow: visible;
+}
+
+.pmb-td-close {
+	position: absolute;
+	top: 16px;
+	right: 16px;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	justify-content: center;
+	width: 36px;
 	height: 36px;
 	border-radius: 10px;
-	background-color: var(--pmb-td-pill-bg);
-	padding: 0 12px;
-	box-sizing: border-box;
-	color: var(--pmb-td-text);
-	font-size: 13px;
+	color: var(--pmb-td-icon);
 	cursor: pointer;
 }
 
-.pmb-td-pill:hover {
+.pmb-td-close:hover {
+	background-color: var(--pmb-td-pill-bg);
+}
+
+.pmb-td-close .pmb-td-icon {
+	width: 18px;
+	height: 18px;
+}
+
+/* The element selectors outweigh Obsidian's own input/textarea styling
+   (fixed height, focus shadow), which the panel's fixed look replaces. */
+.pmb-td-desktop input.pmb-td-title {
+	flex-shrink: 0;
+	width: 100%;
+	height: auto;
+	box-sizing: border-box;
+	background-color: var(--pmb-tdd-title-bg);
+	border: 1px solid var(--pmb-tdd-title-border);
+	border-radius: 10px;
+	box-shadow: none;
+	outline: none;
+	color: var(--pmb-td-text);
+	font-family: inherit;
+	font-size: 18px;
+	font-weight: 700;
+	padding: 10px 12px;
+}
+
+.pmb-td-desktop textarea.pmb-td-description {
+	flex: 0 0 auto;
+	min-height: 340px;
+	border-radius: 12px;
+	box-shadow: none;
+	font-size: 16px;
+	padding: 16px;
+}
+
+.pmb-td-desktop .pmb-td-toolbar {
+	display: flex;
+	flex-shrink: 0;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+
+.pmb-td-pill-wrap {
+	position: relative;
+	display: flex;
+}
+
+.pmb-td-desktop .pmb-td-pill {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 46px;
+	box-sizing: border-box;
+	padding: 0 16px;
+	border-radius: 12px;
+	background-color: var(--pmb-td-pill-bg);
+	color: var(--pmb-td-text);
+	font-size: 16px;
+	white-space: nowrap;
+	cursor: pointer;
+	user-select: none;
+}
+
+.pmb-td-desktop .pmb-td-pill:hover,
+.pmb-td-desktop .pmb-td-pill-active {
 	background-color: var(--pmb-td-pill-hover);
 }
 
-.pmb-td-tag {
-	cursor: default;
-	color: var(--pmb-td-tag-color, var(--pmb-td-icon));
+.pmb-td-pill > .pmb-td-icon {
+	width: 18px;
+	height: 18px;
 }
 
-.pmb-td-pill-icon {
-	display: flex;
-	flex-shrink: 0;
-	width: 16px;
-	height: 16px;
+.pmb-td-desktop .pmb-td-pill-empty .pmb-td-pill-label {
 	color: var(--pmb-td-icon);
 }
 
-.pmb-td-pill-icon svg {
-	width: 100%;
-	height: 100%;
-}
-
-.pmb-td-pill-empty .pmb-td-pill-label {
-	color: var(--pmb-td-icon);
-}
-
-.pmb-td-pill-icon-accent {
-	color: var(--pmb-td-accent);
-}
-
-.pmb-td-pill-label-accent {
+.pmb-td-pill-label-date {
 	color: var(--pmb-td-accent);
 	font-weight: 600;
+	font-variant-numeric: tabular-nums;
 }
 
-.pmb-td-pill-icon-priority {
-	color: var(--pmb-td-priority-color, var(--pmb-td-accent));
+/* The pill tops out at 320px; the tag list ellipsizes inside that. */
+.pmb-td-pill-label-tags {
+	max-width: 254px;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .pmb-td-pill-label-priority {
-	color: var(--pmb-td-priority-color, var(--pmb-td-accent));
 	font-weight: 600;
 }
 
-.pmb-td-pill-clear {
+.pmb-td-desktop .pmb-td-pill-clear {
 	display: flex;
-	flex-shrink: 0;
-	width: 13px;
-	height: 13px;
-	color: var(--pmb-td-icon);
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 6px;
+	color: var(--pmb-td-empty);
 }
 
-.pmb-td-pill-clear svg {
+.pmb-td-desktop .pmb-td-pill-clear:hover {
+	background-color: var(--pmb-tdd-title-border);
+}
+
+.pmb-td-pill-clear .pmb-td-icon {
+	width: 14px;
+	height: 14px;
+}
+
+.pmb-td-icon {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+}
+
+.pmb-td-icon svg {
 	width: 100%;
 	height: 100%;
 }
 
-/* Mobile task-detail sheet. Shares .pmb-task-detail's colour tokens above;
-   everything here is its own layout on top of that (a grouped property
-   list rather than the desktop's toolbar of pills), plus the sizing
-   overrides that replace the desktop panel's fixed 640×450. */
+/* .pmb-td-muted-icon / .pmb-td-accent / .pmb-td-priority-p1-4 (the colour
+   modifiers actually applied to icons and labels) are defined further down,
+   after every rule — desktop and mobile alike — that also sets `color` on
+   the same elements, so they always win regardless of source order there. */
+
+/* Shared by every picker: anchored to its pill, opening upward. */
+.pmb-td-popover {
+	position: absolute;
+	bottom: 54px;
+	left: 0;
+	z-index: 10;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	background-color: var(--pmb-td-popover-bg);
+	border: 1px solid var(--pmb-td-popover-border);
+	border-radius: 12px;
+	box-shadow: var(--pmb-td-popover-shadow);
+	color: var(--pmb-td-text);
+	font-size: 14px;
+	cursor: default;
+}
+
+.pmb-td-popover-project,
+.pmb-td-popover-tags {
+	width: 300px;
+}
+
+.pmb-td-popover-priority {
+	width: 220px;
+	padding: 4px 0;
+	font-size: 15px;
+}
+
+.pmb-td-search {
+	padding: 10px;
+}
+
+.pmb-td-desktop input.pmb-td-search-input {
+	width: 100%;
+	height: auto;
+	box-sizing: border-box;
+	background-color: var(--pmb-td-search-bg);
+	border: 1px solid var(--pmb-td-search-border);
+	border-radius: 8px;
+	box-shadow: none;
+	outline: none;
+	color: var(--pmb-td-text);
+	font-family: inherit;
+	font-size: 14px;
+	padding: 9px 10px;
+}
+
+.pmb-td-list {
+	display: flex;
+	flex-direction: column;
+	max-height: 320px;
+	overflow-y: auto;
+	padding-bottom: 4px;
+}
+
+.pmb-td-popover-tags .pmb-td-list {
+	max-height: 300px;
+}
+
+.pmb-td-row {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 12px;
+	min-height: 36px;
+	padding: 0 14px;
+	cursor: pointer;
+}
+
+.pmb-td-row:hover,
+.pmb-td-row-current {
+	background-color: var(--pmb-td-row-hover);
+}
+
+.pmb-td-row-label {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pmb-td-row-icon {
+	display: flex;
+	flex-shrink: 0;
+	justify-content: center;
+	width: 20px;
+}
+
+.pmb-td-row-icon .pmb-td-icon,
+.pmb-td-tag-icon {
+	width: 18px;
+	height: 18px;
+}
+
+.pmb-td-row-check,
+.pmb-td-row-check-accent {
+	width: 14px;
+	height: 14px;
+}
+
+.pmb-td-row-check-accent {
+	color: var(--pmb-td-accent);
+}
+
+.pmb-td-row-create {
+	color: var(--pmb-td-description);
+}
+
+.pmb-td-empty {
+	padding: 10px 14px;
+	color: var(--pmb-td-empty);
+}
+
+.pmb-td-tag-icon {
+	color: var(--pmb-td-tag-color, var(--pmb-td-tag-default));
+}
+
+.pmb-td-checkbox {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	box-sizing: border-box;
+	border: 1.5px solid var(--pmb-td-empty);
+	border-radius: 4px;
+	color: #1a1a1a;
+}
+
+.pmb-td-checkbox-checked {
+	background-color: var(--pmb-td-accent);
+	border-color: var(--pmb-td-accent);
+}
+
+.pmb-td-checkbox .pmb-td-icon {
+	width: 12px;
+	height: 12px;
+}
+
+.pmb-td-priority-row {
+	gap: 14px;
+	height: 40px;
+}
+
+.pmb-td-priority-row > .pmb-td-icon {
+	width: 20px;
+	height: 20px;
+}
+
+/* Solid flags in the priority list, except P4's outline; the pill's own
+   flag stays an outline whatever the priority, as in the handoff. */
+.pmb-td-priority-row .pmb-td-priority-p1 .pmb-td-flag,
+.pmb-td-priority-row .pmb-td-priority-p2 .pmb-td-flag,
+.pmb-td-priority-row .pmb-td-priority-p3 .pmb-td-flag {
+	fill: currentColor;
+}
+
+.pmb-td-popover-date {
+	width: 260px;
+	font-size: 13px;
+}
+
+.pmb-td-date-field {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--pmb-td-popover-border);
+}
+
+.pmb-td-desktop input.pmb-td-date-input {
+	width: 100%;
+	height: auto;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	outline: none;
+	color: var(--pmb-td-text);
+	font-family: inherit;
+	font-size: 14px;
+	padding: 0;
+}
+
+.pmb-td-desktop input.pmb-td-date-input-invalid {
+	color: var(--pmb-td-accent);
+}
+
+.pmb-td-quick {
+	display: flex;
+	flex-direction: column;
+	padding: 4px;
+	border-bottom: 1px solid var(--pmb-td-popover-border);
+}
+
+.pmb-td-quick-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	height: 34px;
+	padding: 0 8px;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+.pmb-td-quick-row:hover {
+	background-color: var(--pmb-td-quick-hover);
+}
+
+.pmb-td-quick-icon {
+	display: flex;
+	justify-content: center;
+	width: 18px;
+}
+
+.pmb-td-quick-icon .pmb-td-icon {
+	width: 18px;
+	height: 18px;
+}
+
+.pmb-td-quick-hint {
+	color: var(--pmb-td-icon);
+}
+
+/* Fixed hues from the handoff, the same in both themes. */
+.pmb-td-icon-today {
+	color: #22a55b;
+}
+
+.pmb-td-quick-icon .pmb-td-icon-tomorrow {
+	color: #f59e0b;
+}
+
+.pmb-td-quick-icon .pmb-td-icon-nextWeek {
+	color: #a78bfa;
+}
+
+.pmb-td-quick-icon .pmb-td-icon-weekend {
+	color: #4f8ef7;
+}
+
+.pmb-td-quick-icon .pmb-td-icon-noDate {
+	color: var(--pmb-td-icon);
+}
+
+.pmb-td-icon-day {
+	fill: currentColor;
+	stroke: none;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+	font-size: 9px;
+}
+
+.pmb-td-cal-header {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 10px 12px 0;
+}
+
+.pmb-td-cal-title-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.pmb-td-cal-title {
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.pmb-td-cal-nav {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.pmb-td-cal-nav-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 6px;
+	color: var(--pmb-td-nav);
+	cursor: pointer;
+}
+
+.pmb-td-cal-nav-btn:hover {
+	background-color: var(--pmb-td-quick-hover);
+}
+
+.pmb-td-cal-nav-btn .pmb-td-icon {
+	width: 14px;
+	height: 14px;
+}
+
+.pmb-td-cal-nav-disabled {
+	color: var(--pmb-td-nav-disabled);
+	cursor: default;
+}
+
+.pmb-td-cal-nav-disabled:hover {
+	background-color: transparent;
+}
+
+.pmb-td-cal-today-dot {
+	width: 11px;
+	height: 11px;
+	box-sizing: border-box;
+	border: 1.5px solid var(--pmb-td-disabled);
+	border-radius: 50%;
+}
+
+.pmb-td-cal-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	row-gap: 2px;
+	text-align: center;
+}
+
+.pmb-td-cal-weekdays {
+	color: var(--pmb-td-icon);
+	font-size: 11px;
+}
+
+/* Three months at a time, scrolled rather than paged. */
+.pmb-td-cal-months {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	height: 210px;
+	overflow-y: auto;
+	padding: 0 12px 10px;
+}
+
+.pmb-td-cal-month {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.pmb-td-cal-month-label {
+	padding: 6px 0;
+	border-bottom: 1px solid var(--pmb-td-popover-border);
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.pmb-td-cal-cell {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 32px;
+}
+
+.pmb-td-cal-cell-day {
+	cursor: pointer;
+}
+
+.pmb-td-cal-day {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	color: var(--pmb-td-text);
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+}
+
+.pmb-td-cal-cell-day:hover .pmb-td-cal-day {
+	background-color: var(--pmb-td-quick-hover);
+}
+
+.pmb-td-cal-day-past {
+	color: var(--pmb-td-disabled);
+}
+
+.pmb-td-cal-day-today {
+	color: var(--pmb-td-accent);
+	font-weight: 700;
+}
+
+.pmb-td-cal-day-selected,
+.pmb-td-cal-cell-day:hover .pmb-td-cal-day-selected {
+	background-color: var(--pmb-td-accent);
+	color: #1a1a1a;
+	font-weight: 700;
+}
+
+/* A day that already holds a task on the board. */
+.pmb-td-cal-dot {
+	width: 3px;
+	height: 3px;
+	margin-top: -3px;
+	border-radius: 50%;
+}
+
+.pmb-td-cal-dot-on {
+	background-color: var(--pmb-td-dot);
+}
+
+.pmb-td-cal-day-selected + .pmb-td-cal-dot-on {
+	background-color: #1a1a1a;
+}
+
+/* Mobile task-detail sheet, from its own design handoff: a grouped property
+   card (title, project, date, priority, tags) plus a description, and a
+   bottom sheet per row that opens the same pickers the desktop panel's
+   pills use (project.ts, task-detail-pickers.ts), sized for touch. Shares
+   .pmb-task-detail's colour tokens; everything here is its own layout on
+   top of that. */
 .pmb-task-sheet.modal {
+	position: relative;
 	width: 390px;
 	max-width: calc(100vw - 32px);
 	height: auto;
 	min-height: 450px;
 	max-height: 85vh;
+	overflow: hidden;
 	border-radius: 32px;
 }
 
@@ -1094,8 +1635,13 @@
 	display: flex;
 	align-items: center;
 	gap: 14px;
-	padding: 16px;
+	min-height: 52px;
+	padding: 0 16px;
 	cursor: pointer;
+}
+
+.pmb-ts-row:active {
+	background-color: var(--pmb-td-pill-hover);
 }
 
 .pmb-ts-row-title {
@@ -1103,8 +1649,13 @@
 	cursor: default;
 }
 
+.pmb-ts-row-title:active {
+	background-color: transparent;
+}
+
 .pmb-ts-row-tags {
 	align-items: flex-start;
+	padding: 10px 16px;
 }
 
 .pmb-ts-divider {
@@ -1138,19 +1689,16 @@
 	flex-shrink: 0;
 	width: 20px;
 	height: 20px;
-	color: var(--pmb-td-icon);
 }
 
-.pmb-ts-row-icon svg {
+.pmb-ts-row-icon .pmb-td-icon {
 	width: 100%;
 	height: 100%;
 }
 
-.pmb-ts-row-icon-priority {
-	color: var(--pmb-td-priority-color, var(--pmb-td-accent));
-}
-
 .pmb-ts-row-value {
+	flex: 1;
+	min-width: 0;
 	color: var(--pmb-td-text);
 	font-size: 12px;
 }
@@ -1159,23 +1707,30 @@
 	color: var(--pmb-td-icon);
 }
 
-.pmb-ts-row-value-priority {
-	color: var(--pmb-td-priority-color, var(--pmb-td-accent));
-	font-weight: 600;
+/* The clear (×) button on a set Date row: a 44px touch target so it doesn't
+   also trigger the row's own tap-to-open, its click stops that propagating. */
+.pmb-ts-row-clear {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	margin: -14px -16px -14px 0;
+	color: var(--pmb-td-empty);
 }
 
-.pmb-ts-row-accent .pmb-ts-row-value {
-	color: var(--pmb-td-accent);
-}
-
-.pmb-ts-row-accent .pmb-ts-row-icon {
-	color: var(--pmb-td-accent);
+.pmb-ts-row-clear .pmb-td-icon {
+	width: 14px;
+	height: 14px;
 }
 
 .pmb-ts-tag-wrap {
 	display: flex;
+	flex: 1;
 	flex-wrap: wrap;
 	gap: 8px;
+	min-width: 0;
 }
 
 .pmb-ts-tag {
@@ -1183,14 +1738,259 @@
 	align-items: center;
 	background-color: var(--pmb-td-chip-bg);
 	color: var(--pmb-td-tag-color, var(--pmb-td-text));
-	font-size: 13px;
-	padding: 6px 12px;
+	font-size: 12px;
+	padding: 5px 11px;
 	border-radius: 999px;
 }
 
 .pmb-ts-tag-empty {
+	color: var(--pmb-td-icon);
+	font-size: 12px;
+}
+
+/* The bottom sheet itself: scrim covers the whole frame (catching the tap
+   that closes it), sheet is bottom-anchored inside it, clipped by the
+   frame's own rounded corners and overflow:hidden set above. */
+.pmb-ts-scrim {
+	position: absolute;
+	inset: 0;
+	z-index: 40;
+	background-color: rgba(0, 0, 0, 0.55);
+}
+
+.pmb-ts-sheet {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 41;
+	display: flex;
+	flex-direction: column;
+	max-height: 88%;
+	background-color: var(--pmb-td-popover-bg);
+	border-radius: 24px 24px 0 0;
+	box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
+	color: var(--pmb-td-text);
+	font-size: 15px;
+}
+
+.pmb-ts-grabber-wrap {
+	display: flex;
+	flex-shrink: 0;
+	justify-content: center;
+	padding: 8px 0 4px;
+}
+
+.pmb-ts-grabber {
+	width: 36px;
+	height: 5px;
+	border-radius: 3px;
+	background-color: var(--pmb-td-nav-disabled);
+}
+
+.pmb-ts-sheet-body {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-height: 0;
+}
+
+/* The desktop popover's own fixed widths don't apply once nested in a
+   full-width bottom sheet; these two classes always land on the same
+   element, so the compound selector (higher specificity than the bare
+   class alone) wins regardless of source order. */
+.pmb-ts-sheet-body.pmb-td-popover-project,
+.pmb-ts-sheet-body.pmb-td-popover-tags,
+.pmb-ts-sheet-body.pmb-td-popover-priority,
+.pmb-ts-sheet-body.pmb-td-popover-date {
+	width: auto;
+	font-size: inherit;
+}
+
+.pmb-ts-sheet-body .pmb-td-list {
+	flex: 1;
+	min-height: 0;
+	max-height: none;
+}
+
+/* Touch-sized overrides of the shared picker rows/search/calendar, per the
+   mobile handoff's own measurements (larger than the desktop popover's). */
+.pmb-ts-sheet input.pmb-td-search-input,
+.pmb-ts-sheet input.pmb-td-date-input {
+	background-color: var(--pmb-td-search-bg);
+	border: 1px solid var(--pmb-td-search-border);
+	border-radius: 10px;
+	font-size: 16px;
+	padding: 11px 12px;
+}
+
+.pmb-ts-sheet .pmb-td-date-field {
+	border: none;
+	padding: 6px 20px 12px;
+	border-bottom: 1px solid var(--pmb-td-popover-border);
+}
+
+.pmb-ts-sheet input.pmb-td-date-input {
+	border: none;
+	padding: 0;
+}
+
+.pmb-ts-sheet .pmb-td-search {
+	flex-shrink: 0;
+	padding: 8px 16px 10px;
+}
+
+.pmb-ts-sheet .pmb-td-row {
+	min-height: 48px;
+	padding: 0 20px;
+}
+
+.pmb-ts-sheet .pmb-td-row:active,
+.pmb-ts-sheet .pmb-td-quick-row:active,
+.pmb-ts-sheet .pmb-td-cal-nav-btn:active {
+	background-color: var(--pmb-td-row-hover);
+}
+
+.pmb-ts-sheet .pmb-td-row-icon .pmb-td-icon,
+.pmb-ts-sheet .pmb-td-tag-icon {
+	width: 20px;
+	height: 20px;
+}
+
+.pmb-ts-sheet .pmb-td-checkbox {
+	width: 20px;
+	height: 20px;
+	border-radius: 5px;
+}
+
+.pmb-ts-sheet .pmb-td-checkbox .pmb-td-icon {
+	width: 13px;
+	height: 13px;
+}
+
+.pmb-ts-sheet .pmb-td-empty {
+	padding: 12px 20px;
+}
+
+.pmb-ts-sheet .pmb-td-priority-row {
+	min-height: 50px;
+	padding: 0 20px;
+}
+
+.pmb-ts-sheet .pmb-td-priority-row > .pmb-td-icon {
+	width: 22px;
+	height: 22px;
+}
+
+.pmb-ts-sheet .pmb-td-quick {
+	padding: 4px 0;
+}
+
+.pmb-ts-sheet .pmb-td-quick-row {
+	min-height: 46px;
+	padding: 0 20px;
+}
+
+.pmb-ts-sheet .pmb-td-quick-icon,
+.pmb-ts-sheet .pmb-td-quick-icon .pmb-td-icon {
+	width: 20px;
+	height: 20px;
+}
+
+.pmb-ts-sheet .pmb-td-cal-header {
+	padding: 12px 20px 0;
+}
+
+.pmb-ts-sheet .pmb-td-cal-title {
+	font-size: 16px;
+}
+
+.pmb-ts-sheet .pmb-td-cal-weekdays {
+	font-size: 12px;
+}
+
+.pmb-ts-sheet .pmb-td-cal-nav {
+	gap: 0;
+}
+
+.pmb-ts-sheet .pmb-td-cal-nav-btn {
+	width: 44px;
+	height: 44px;
+}
+
+.pmb-ts-sheet .pmb-td-cal-nav-btn .pmb-td-icon {
+	width: 16px;
+	height: 16px;
+}
+
+.pmb-ts-sheet .pmb-td-cal-today-dot {
+	width: 9px;
+	height: 9px;
+}
+
+.pmb-ts-sheet .pmb-td-cal-months {
+	height: 230px;
+	padding: 0 20px 20px;
+}
+
+.pmb-ts-sheet .pmb-td-cal-month-label {
+	padding: 8px 0;
+	font-size: 15px;
+}
+
+.pmb-ts-sheet .pmb-td-cal-cell {
+	height: 44px;
+}
+
+.pmb-ts-sheet .pmb-td-cal-day {
+	width: 34px;
+	height: 34px;
+	font-size: 15px;
+}
+
+.pmb-ts-sheet .pmb-td-cal-dot {
+	width: 4px;
+	height: 4px;
+	margin-top: -4px;
+}
+
+/* Priority colours and the mute/accent modifiers, shared by the desktop
+   pill/popover and the mobile row/sheet — placed after every other rule
+   above that also sets `color` on a `.pmb-td-*-icon`/`.pmb-td-row-value`/
+   `.pmb-ts-row-value` element, so a class combining one of those with a
+   modifier here always shows the modifier's colour, whichever order the
+   two classes are listed in markup. */
+.pmb-td-muted-icon {
+	color: var(--pmb-td-icon);
+}
+
+.pmb-td-accent {
+	color: var(--pmb-td-accent);
+}
+
+/* Applied directly to the icon element itself (no sizing wrapper, unlike
+   .pmb-ts-row-icon / .pmb-td-pill's own icons), so it needs its own size. */
+.pmb-td-chevron {
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
 	color: var(--pmb-td-muted-3);
-	font-size: 14px;
+}
+
+.pmb-td-priority-p1 {
+	color: var(--pmb-td-priority-p1);
+}
+
+.pmb-td-priority-p2 {
+	color: var(--pmb-td-priority-p2);
+}
+
+.pmb-td-priority-p3 {
+	color: var(--pmb-td-priority-p3);
+}
+
+.pmb-td-priority-p4 {
+	color: var(--pmb-td-priority-p4);
 }
 
 /* Card context menu, from the design handoff. It lives on the document body

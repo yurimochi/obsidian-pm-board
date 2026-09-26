@@ -47,3 +47,17 @@ export function coerceGroupValue(columnKey: string | null, sample: unknown): unk
 	const parsed = Number(columnKey);
 	return columnKey.trim() !== "" && Number.isFinite(parsed) ? parsed : columnKey;
 }
+
+/**
+ * A single text value written in the shape existing notes already use for
+ * the property: wrapped in a list when they hold one (a property picker
+ * often stores even one project that way), and as a wikilink when they
+ * link. `sample` is any existing value; with none, plain text is written.
+ */
+export function shapedLike(value: string, sample: unknown): unknown {
+	const list = Array.isArray(sample);
+	const scalar: unknown = list ? (sample as unknown[])[0] : sample;
+	const linked = typeof scalar === "string" && /^\[\[.*\]\]$/.test(scalar.trim());
+	const text = linked ? `[[${value}]]` : value;
+	return list ? [text] : text;
+}

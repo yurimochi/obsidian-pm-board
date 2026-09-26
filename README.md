@@ -102,8 +102,8 @@ Obsidian's own light/dark appearance setting rather than a community theme's
 variables. The font is fixed the same way — the design's own system font
 stack, not the interface font picked in Obsidian's settings. Both
 task-detail floatings (see **Card detail** below) share this same fixed
-palette; only the rename/tag-edit prompts still follow Obsidian's native
-modal styling.
+palette; only the card's own rename input and the column/WIP-limit prompts
+still follow Obsidian's native modal styling.
 
 ### Priority
 
@@ -305,36 +305,54 @@ card's own context menu actions elsewhere on the board. A property held as
 a wikilink (project being one commonly is) shows and reads back as its
 alias or note name rather than the raw `[[...]]` text. Obsidian adds its
 own close button to every Modal regardless of subclass; both floatings
-hide it (they close via Escape or clicking outside instead, which is
-already how Obsidian's own modals behave), since on desktop it sat close
-enough over the title field to swallow clicks meant for the input under it.
+hide it in favour of their own (the desktop panel's X, the mobile sheet's
+header), which also close via Escape or clicking outside.
 
-**On desktop**, it's a compact task editor built from a design handoff, not
-the raw note: a fixed-height (450px) panel with a title, a description (the
-note's body, minus its frontmatter, in a plain text field that fills the
-remaining space), and a bottom toolbar of property pills — Project, Due,
-Tags, and Priority — each editable in place. All four labels always show,
-even with nothing set yet (shown muted until a value is picked), rather
-than appearing only once a value exists. The panel has no close or submit
-button of its own; Escape or clicking outside it, Obsidian's own modal
-behaviour, is how it closes.
+**On desktop**, it's a task editor from its own design handoff, not the raw
+note: an 840px panel with a close button, a bordered title, a tall
+description (the note's body, minus its frontmatter), and a row of property
+pills — Project, Date, Tags and Priority — each opening its own picker above
+it. One picker is open at a time; Escape or a click outside closes just the
+picker, leaving the panel open.
+
+- **Project**: a searchable list of every project any note in the vault
+  names. Enter picks the first match; a name matching none can be created.
+  Picking the current project again clears it. Written in the shape the
+  vault already uses — a one-item list, or a link, when other notes do.
+- **Date**: a field that takes a typed date ("3 Oct", "Oct 3", "3/10",
+  "2026-10-03", "today"/"tomorrow", Portuguese month names too; empty +
+  Enter clears), quick options — Today, Tomorrow, Next week (next Monday),
+  Next weekend (next Saturday), No Date — and a three-month calendar that
+  scrolls, with a dot under days that already have a task on the board.
+  The pill's × clears the date.
+- **Tags**: a searchable, multi-select list of every tag in the vault,
+  staying open while tags are ticked on and off; a label matching none can
+  be created. The `task` tag every card carries isn't offered, and is kept.
+- **Priority**: Priority 1 to 4, the current one ticked; picking it again
+  clears it. Written as a bare `1`-`4` when the vault's notes hold digits,
+  `P1`-`P4` otherwise. The picker uses this handoff's own colours (P2
+  amber, P3 blue), which differ from the board's badges.
 
 **On mobile**, it's a bottom-sheet-styled summary instead, from its own
-design handoff (revised since the first pass to drop the drag handle,
-swap the header's two buttons to "..." on the left / X on the right, and
-add a description field of its own): a header, a grouped card of property
-rows — title (14px/700, with a status ring coloured only once the `due`
-date is in the past), Project, Due, Priority, and Tags, each row tappable
-to edit the same way as the desktop panel's pills — and, below that, a
-separate rounded description box (280px minimum height, its own surface
-distinct from the property card's). The whole sheet is at least 450px
-tall, growing past that for longer content, up to 85% of the viewport
-before it scrolls internally. All rows always show, even unset (muted),
-rather than the handoffs' own omit-when-empty treatment, and the header's
-"..." opens the note itself in the active pane rather than sitting
-unwired — both intentional
-departures from the handoffs, for parity with the desktop panel and so
-every field stays reachable from the sheet itself.
+design handoff: a header ("..." opens the note itself in the active pane,
+X closes), a grouped card of property rows — title (14px/700, with a
+status ring coloured only once the `due` date is in the past), Project,
+Date, Priority, and Tags, each tappable — and, below that, a separate
+rounded description box (280px minimum height, its own surface distinct
+from the property card's). The whole sheet is at least 450px tall,
+growing past that for longer content, up to 85% of the viewport before it
+scrolls internally. All rows always show, even unset (muted), rather than
+the handoff's own omit-when-empty treatment, so every field stays
+reachable from the sheet itself.
+
+Tapping a row opens a bottom sheet from its own handoff — the same
+pickers the desktop panel's pills open (see **Project**, **Date**,
+**Tags**, **Priority** above), sized for touch: 44px+ targets, 16px
+search fields (avoids iOS's zoom-on-focus), and a taller three-month
+calendar. One sheet is open at a time; tapping its scrim or pressing
+Escape closes just the sheet, leaving the rest of the floating open. The
+Date row's own × (a 44px target) clears the date without opening the
+sheet.
 
 Focusing the description on mobile can put it behind the on-screen
 keyboard, low in a sheet that already runs tall; Obsidian's modal doesn't

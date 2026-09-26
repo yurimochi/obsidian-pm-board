@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coerceGroupValue, frontmatterKeyOf, resolveLink } from "../src/frontmatter";
+import { coerceGroupValue, frontmatterKeyOf, resolveLink, shapedLike } from "../src/frontmatter";
 
 describe("frontmatterKeyOf", () => {
 	it("strips the note prefix", () => {
@@ -67,5 +67,21 @@ describe("resolveLink", () => {
 
 	it("leaves plain text untouched", () => {
 		expect(resolveLink("payments")).toBe("payments");
+	});
+});
+
+describe("shapedLike", () => {
+	it("wraps the value in a list when existing notes use one", () => {
+		expect(shapedLike("kyc", ["accreditation"])).toEqual(["kyc"]);
+	});
+
+	it("writes a link when existing notes link", () => {
+		expect(shapedLike("kyc", "[[accreditation]]")).toBe("[[kyc]]");
+		expect(shapedLike("kyc", ["[[accreditation]]"])).toEqual(["[[kyc]]"]);
+	});
+
+	it("writes plain text otherwise", () => {
+		expect(shapedLike("kyc", "accreditation")).toBe("kyc");
+		expect(shapedLike("kyc", undefined)).toBe("kyc");
 	});
 });

@@ -1,14 +1,25 @@
 import { App, Modal, Notice, setIcon, TFile } from "obsidian";
 import { BoardConfig } from "./board-config";
+import {
+	drawIcon,
+	renderDatePicker,
+	renderPriorityPicker,
+	renderProjectPicker,
+	renderTagPicker,
+} from "./task-detail-pickers";
 import { TaskProperties } from "./task-properties";
 
+type RowName = "project" | "date" | "tags" | "priority";
+
 /**
- * Mobile-only floating task sheet: a tap-to-edit summary of a card's
- * properties (project, due date, tags, priority) plus a description field
- * (the note's body), per the design handoff. The "..." header button opens
- * the note itself, the same as a long-press card menu's Open, for anything
- * this sheet doesn't cover (arbitrary frontmatter, the native Properties
- * widget, the rest of the note's content).
+ * Mobile-only floating task sheet, from its own design handoff: a grouped
+ * property card (title, project, date, priority, tags) plus a description
+ * field (the note's body). Each property row opens a bottom sheet — the
+ * same pickers the desktop panel's pills open, adapted to touch, so an
+ * edit on one platform behaves exactly like the other's. The "..." header
+ * button opens the note itself, the same as a long-press card menu's Open,
+ * for anything this sheet doesn't cover (arbitrary frontmatter, the native
+ * Properties widget, the rest of the note's content).
  */
 export class TaskDetailSheet extends Modal {
 	private readonly props: TaskProperties;
@@ -18,6 +29,8 @@ export class TaskDetailSheet extends Modal {
 	private originalDescription = "";
 	/** Set only while the description is focused, so it can be torn down again on blur. */
 	private keyboardListener: (() => void) | null = null;
+	/** The one property sheet currently open, if any. */
+	private openRow: { name: RowName; scrimEl: HTMLElement; sheetEl: HTMLElement } | null = null;
 
 	constructor(
 		app: App,
@@ -25,11 +38,12 @@ export class TaskDetailSheet extends Modal {
 		config: BoardConfig,
 		/** Called once the sheet has fully closed. */
 		private readonly onDismiss?: () => void,
+		/** Dates (YYYY-MM-DD) holding a task on the board, dotted in the date sheet's calendar. */
+		private readonly taskDates: Set<string> = new Set(),
 	) {
 		super(app);
 		this.props = new TaskProperties(app, file, config);
-		this.modalEl.addClass("pmb-task-detail");
-		this.modalEl.addClass("pmb-task-sheet");
+		this.modalEl.addClass("pmb-task-detail", "pmb-task-sheet");
 	}
 
 	async onOpen(): Promise<void> {
@@ -44,9 +58,19 @@ export class TaskDetailSheet extends Modal {
 	}
 
 	onClose(): void {
+		this.closeSheet();
 		this.clearKeyboardOffset();
 		this.contentEl.empty();
 		this.onDismiss?.();
+	}
+
+	/** A bottom sheet open counts as Obsidian's own modal Escape/backdrop-close target first. */
+	close(): void {
+		if (this.openRow) {
+			this.closeSheet();
+			return;
+		}
+		super.close();
 	}
 
 	private renderHeader(): void {
@@ -67,7 +91,7 @@ export class TaskDetailSheet extends Modal {
 	private renderDescription(): void {
 		this.descriptionEl = this.contentEl.createEl("textarea", { cls: "pmb-td-description" });
 		this.descriptionEl.value = this.originalDescription;
-		this.descriptionEl.placeholder = "Add a description…";
+		this.descriptionEl.placeholder = "Add a description...";
 		this.descriptionEl.addEventListener("focus", () => this.avoidKeyboard());
 		this.descriptionEl.addEventListener("blur", () => {
 			void this.commitDescription();
@@ -163,13 +187,10 @@ export class TaskDetailSheet extends Modal {
 
 		const rowEl = this.groupEl.createDiv({ cls: "pmb-ts-row" });
 		rowEl.toggleClass("pmb-ts-row-empty", !value);
-		setIcon(rowEl.createSpan({ cls: "pmb-ts-row-icon" }), "lucide-folder");
+		drawIcon(rowEl.createSpan({ cls: "pmb-ts-row-icon" }), "folder", "pmb-td-muted-icon");
 		rowEl.createSpan({ cls: "pmb-ts-row-value", text: value || "Project" });
-		rowEl.addEventListener("click", () => {
-			void this.props.promptProject().then((changed) => {
-				if (changed) this.renderGroup();
-			});
-		});
+		drawIcon(rowEl, "chevronRight", "pmb-td-chevron", "2");
+		rowEl.addEventListener("click", () => this.openSheet("project"));
 		return true;
 	}
 
@@ -177,50 +198,58 @@ export class TaskDetailSheet extends Modal {
 		const value = this.props.due;
 
 		const rowEl = this.groupEl.createDiv({ cls: "pmb-ts-row" });
-		rowEl.toggleClass("pmb-ts-row-accent", !!value);
 		rowEl.toggleClass("pmb-ts-row-empty", !value);
-		setIcon(rowEl.createSpan({ cls: "pmb-ts-row-icon" }), "lucide-calendar");
-		rowEl.createSpan({ cls: "pmb-ts-row-value", text: value || "Due" });
-		rowEl.addEventListener("click", () => {
-			void this.props.promptDue().then((changed) => {
-				if (changed) this.renderGroup();
+		drawIcon(
+			rowEl.createSpan({ cls: "pmb-ts-row-icon" }),
+			"calendar",
+			value ? "pmb-td-accent" : "pmb-td-muted-icon",
+		);
+		const valueEl = rowEl.createSpan({ cls: "pmb-ts-row-value", text: value || "Date" });
+		valueEl.toggleClass("pmb-td-pill-label-date", !!value);
+		rowEl.addEventListener("click", () => this.openSheet("date"));
+
+		if (value) {
+			const clearEl = rowEl.createSpan({
+				cls: "pmb-ts-row-clear",
+				attr: { role: "button", "aria-label": "Clear date" },
 			});
-		});
+			drawIcon(clearEl, "close", "", "2");
+			clearEl.addEventListener("click", (event: MouseEvent) => {
+				event.stopPropagation();
+				void this.props.setDue(null).then(() => this.renderGroup());
+			});
+		} else {
+			drawIcon(rowEl, "chevronRight", "pmb-td-chevron", "2");
+		}
 		return true;
 	}
 
 	private renderPriorityRow(): boolean {
 		if (!this.props.hasPriority) return false;
 		const priority = this.props.priority;
+		const tone = priority ? `pmb-td-priority-${priority.toLowerCase()}` : "pmb-td-muted-icon";
 
 		const rowEl = this.groupEl.createDiv({ cls: "pmb-ts-row" });
 		rowEl.toggleClass("pmb-ts-row-empty", !priority);
-		if (priority) {
-			rowEl.style.setProperty(
-				"--pmb-td-priority-color",
-				`var(--pmb-td-priority-${priority.toLowerCase()})`,
-			);
-		}
-		const iconEl = rowEl.createSpan({ cls: "pmb-ts-row-icon" });
-		iconEl.toggleClass("pmb-ts-row-icon-priority", !!priority);
-		setIcon(iconEl, "lucide-flag");
-		const valueEl = rowEl.createSpan({ cls: "pmb-ts-row-value" });
-		valueEl.toggleClass("pmb-ts-row-value-priority", !!priority);
-		valueEl.setText(priority ? `Priority ${priority.slice(1)}` : "Priority");
-		rowEl.addEventListener("click", (event: MouseEvent) => {
-			this.props.showPriorityMenu(event, () => this.renderGroup());
+		drawIcon(rowEl.createSpan({ cls: "pmb-ts-row-icon" }), "flag", tone);
+		const valueEl = rowEl.createSpan({
+			cls: "pmb-ts-row-value",
+			text: priority ? `Priority ${priority.slice(1)}` : "Priority",
 		});
+		if (priority) valueEl.addClass("pmb-td-pill-label-priority", tone);
+		drawIcon(rowEl, "chevronRight", "pmb-td-chevron", "2");
+		rowEl.addEventListener("click", () => this.openSheet("priority"));
 		return true;
 	}
 
 	private renderTagsRow(): boolean {
 		const rowEl = this.groupEl.createDiv({ cls: "pmb-ts-row pmb-ts-row-tags" });
-		setIcon(rowEl.createSpan({ cls: "pmb-ts-row-icon" }), "lucide-tags");
+		drawIcon(rowEl.createSpan({ cls: "pmb-ts-row-icon" }), "tag", "pmb-td-muted-icon");
 		const wrapEl = rowEl.createDiv({ cls: "pmb-ts-tag-wrap" });
 
 		const tags = this.props.tags;
 		if (tags.length === 0) {
-			wrapEl.createSpan({ cls: "pmb-ts-tag-empty", text: "No tags" });
+			wrapEl.createSpan({ cls: "pmb-ts-tag-empty", text: "Tags" });
 		} else {
 			for (const tag of tags) {
 				const tagEl = wrapEl.createSpan({ cls: "pmb-ts-tag" });
@@ -229,11 +258,70 @@ export class TaskDetailSheet extends Modal {
 				tagEl.setText(tag);
 			}
 		}
-		rowEl.addEventListener("click", () => {
-			void this.props.editTags().then((changed) => {
-				if (changed) this.renderGroup();
-			});
-		});
+		drawIcon(rowEl, "chevronRight", "pmb-td-chevron", "2");
+		rowEl.addEventListener("click", () => this.openSheet("tags"));
 		return true;
+	}
+
+	/** Opens the bottom sheet for one property row; only one is open at a time. */
+	private openSheet(name: RowName): void {
+		this.closeSheet();
+
+		const scrimEl = this.modalEl.createDiv({ cls: "pmb-ts-scrim" });
+		scrimEl.addEventListener("click", () => this.closeSheet());
+
+		const sheetEl = this.modalEl.createDiv({ cls: "pmb-ts-sheet" });
+		this.openRow = { name, scrimEl, sheetEl };
+
+		sheetEl.createDiv({ cls: "pmb-ts-grabber-wrap" }).createSpan({ cls: "pmb-ts-grabber" });
+		const bodyEl = sheetEl.createDiv({ cls: "pmb-ts-sheet-body" });
+
+		const focusEl = this.renderSheetBody(name, bodyEl);
+		focusEl?.focus();
+	}
+
+	private renderSheetBody(name: RowName, bodyEl: HTMLElement): HTMLElement | null {
+		const done = (write: Promise<void>): void => {
+			this.closeSheet();
+			void write.then(() => this.renderGroup());
+		};
+
+		switch (name) {
+			case "project":
+				return renderProjectPicker(bodyEl, {
+					projects: this.props.knownProjects(),
+					current: this.props.project,
+					onPick: (project) => done(this.props.setProject(project)),
+				});
+			case "date":
+				return renderDatePicker(bodyEl, {
+					current: this.props.due,
+					taskDates: this.taskDates,
+					onPick: (date) => done(this.props.setDue(date)),
+				});
+			case "tags":
+				return renderTagPicker(bodyEl, {
+					tags: this.props.knownTags(),
+					selected: () => this.props.tags,
+					colorOf: (tag) => this.props.tagColor(tag),
+					onToggle: async (tag) => {
+						await this.props.toggleTag(tag);
+						this.renderGroup();
+					},
+				});
+			case "priority":
+				renderPriorityPicker(bodyEl, {
+					current: this.props.priority,
+					onPick: (priority) => done(this.props.setPriority(priority)),
+				});
+				return null;
+		}
+	}
+
+	private closeSheet(): void {
+		if (!this.openRow) return;
+		this.openRow.scrimEl.detach();
+		this.openRow.sheetEl.detach();
+		this.openRow = null;
 	}
 }
