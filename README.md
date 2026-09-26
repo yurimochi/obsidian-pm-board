@@ -219,9 +219,16 @@ views:
       team: frontend
 ```
 
+Both the template and the folder can also be picked in the view's own
+settings (**New card template**, **New card folder**) instead of written by
+hand. Without a template, a new card starts empty — so a board whose filters
+rely on a property or tag the template would have added (a `task` tag, say)
+won't show the card it just created.
+
 - **`newItemFolder`** files new cards here, creating the folder if it does not
   exist yet. Without it, the vault's own preference for new notes applies.
-- **`newItemTemplate`** supplies the new card's body and properties.
+- **`newItemTemplate`** supplies the new card's body and properties. A path
+  (with or without `.md`) or a wikilink to the note both work.
   `{{title}}`, `{{date}}`, `{{time}}` and their `{{date:FORMAT}}` variants are
   filled in, matching the core Templates plugin.
 - **`newItemProperties`** are merged over the template's.

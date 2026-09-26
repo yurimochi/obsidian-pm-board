@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyPlaceholders, joinPath, uniqueName } from "../src/template";
+import { applyPlaceholders, joinPath, templateLinkText, uniqueName } from "../src/template";
 
 /** Stands in for moment: echoes the pattern so substitution is observable. */
 const ctx = {
@@ -71,5 +71,22 @@ describe("joinPath", () => {
 
 	it("tolerates a trailing slash", () => {
 		expect(joinPath("Tasks/", "Untitled")).toBe("Tasks/Untitled");
+	});
+});
+
+describe("templateLinkText", () => {
+	it("keeps a plain path", () => {
+		expect(templateLinkText("Tasks/Template/Task Template.md")).toBe(
+			"Tasks/Template/Task Template.md",
+		);
+		expect(templateLinkText("  Templates/task  ")).toBe("Templates/task");
+	});
+
+	it("unwraps a wikilink, dropping any alias or heading", () => {
+		expect(templateLinkText("[[Task Template]]")).toBe("Task Template");
+		expect(templateLinkText("[[Tasks/Template/Task Template.md|Task]]")).toBe(
+			"Tasks/Template/Task Template.md",
+		);
+		expect(templateLinkText("[[Task Template#Body]]")).toBe("Task Template");
 	});
 });

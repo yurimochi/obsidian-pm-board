@@ -65,7 +65,7 @@ import {
 	mergeOverdueColumns,
 	OVERDUE_COLUMN_KEY,
 } from "./swimlanes";
-import { applyPlaceholders, joinPath, uniqueName } from "./template";
+import { applyPlaceholders, joinPath, templateLinkText, uniqueName } from "./template";
 import { TaskDetailModal } from "./task-detail-modal";
 import { TaskDetailSheet } from "./task-detail-sheet";
 import { DUE_PROPERTY } from "./task-properties";
@@ -1120,7 +1120,11 @@ export class BoardView extends BasesView {
 	/** The template's full text, or null when the board names no usable one. */
 	private async loadTemplate(path: string | null): Promise<string | null> {
 		if (!path) return null;
-		const file = this.app.vault.getFileByPath(normalizePath(path));
+		const target = templateLinkText(path);
+		const file =
+			this.app.vault.getFileByPath(normalizePath(target)) ??
+			this.app.vault.getFileByPath(normalizePath(`${target}.md`)) ??
+			this.app.metadataCache.getFirstLinkpathDest(target, this.currentSourcePath());
 		if (!file) {
 			new Notice(`Template not found: ${path}`);
 			return null;

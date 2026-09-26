@@ -41,3 +41,14 @@ export function joinPath(folder: string, name: string): string {
 	const trimmed = folder.replace(/\/+$/, "");
 	return trimmed ? `${trimmed}/${name}` : name;
 }
+
+/**
+ * A configured template reference as link text: the view's own file picker
+ * may store a wikilink rather than a path, and a hand-written setting may
+ * leave off ".md", so both are reduced to the bare target for lookup.
+ */
+export function templateLinkText(raw: string): string {
+	const trimmed = raw.trim();
+	const link = /^!?\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]$/.exec(trimmed);
+	return (link ? link[1] : trimmed).trim();
+}

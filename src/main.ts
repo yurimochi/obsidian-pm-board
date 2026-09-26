@@ -23,6 +23,19 @@ export default class PmBoardPlugin extends Plugin {
 					},
 				},
 				{
+					key: "newItemTemplate",
+					type: "file",
+					displayName: "New card template",
+					placeholder: "Templates/Task.md",
+					filter: (file) => file.extension === "md",
+				},
+				{
+					key: "newItemFolder",
+					type: "folder",
+					displayName: "New card folder",
+					placeholder: "Vault default",
+				},
+				{
 					key: "projectProperty",
 					type: "property",
 					displayName: "Project",
