@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__remote-devices__device_list_dir",
+      "mcp__remote-devices__device_stage_files",
+      "mcp__remote-devices__device_commit_files",
+      "mcp__remote-devices__device_request_folder_access",
+      "mcp__remote-devices__device_request_delete_permission"
+    ]
+  }
+}
