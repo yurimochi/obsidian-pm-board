@@ -1074,15 +1074,43 @@ export class BoardView extends BasesView {
 			},
 		);
 
-		await this.openFile(file, config);
+		await this.openFile(
+			file,
+			config,
+			{ mod: false, alt: false },
+			await this.app.vault.read(file),
+		);
 	}
 
-	/** Opens a file the same way a click on a card does, honouring Card Detail. */
+	/**
+	 * Drops a just-created card whose detail floating was closed without any
+	 * edit, so merely opening a new task never leaves an "Untitled" note behind.
+	 * Waits a moment first so a field's blur-save at close has landed.
+	 */
+	private async discardIfUntouched(
+		file: TFile,
+		createdPath: string,
+		initialContent: string,
+	): Promise<void> {
+		await new Promise((resolve) => window.setTimeout(resolve, 300));
+		// A rename leaves the content alone but is an edit all the same.
+		if (file.path !== createdPath || !this.app.vault.getAbstractFileByPath(file.path)) return;
+		if ((await this.app.vault.read(file)) !== initialContent) return;
+		await this.app.fileManager.trashFile(file);
+	}
+
+	/**
+	 * Opens a file the same way a click on a card does, honouring Card Detail.
+	 * `untouchedContent` is set for a card just created: if its floating closes
+	 * with the note still exactly that, the note is deleted again.
+	 */
 	private async openFile(
 		file: TFile,
 		config: BoardConfig,
 		modifiers: OpenModifiers = { mod: false, alt: false },
+		untouchedContent?: string,
 	): Promise<void> {
+		const createdPath = file.path;
 		const target = resolveOpenTarget(config.cardOpenBehavior, modifiers);
 		if (target === "modal") {
 			// Closing the modal can trigger a redraw (the host re-querying after
@@ -1093,6 +1121,9 @@ export class BoardView extends BasesView {
 			// actually matters.
 			const onDismiss = (): void => {
 				this.pendingFocus = file.path;
+				if (untouchedContent !== undefined) {
+					void this.discardIfUntouched(file, createdPath, untouchedContent);
+				}
 			};
 			if (Platform.isMobile) {
 				new TaskDetailSheet(this.app, file, config, onDismiss, this.taskDates()).open();
