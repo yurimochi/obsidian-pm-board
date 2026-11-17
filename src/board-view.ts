@@ -74,6 +74,7 @@ import {
 } from "./swimlanes";
 import { applyPlaceholders, joinPath, templateLinkText, uniqueName } from "./template";
 import { TaskDetailModal } from "./task-detail-modal";
+import { showUndoToast } from "./undo-toast";
 import { TaskDetailSheet } from "./task-detail-sheet";
 import { DUE_PROPERTY } from "./task-properties";
 
@@ -983,7 +984,7 @@ export class BoardView extends BasesView {
 	 * Card actions are started from event handlers, where a rejected promise
 	 * would otherwise be swallowed and the board would simply not change.
 	 */
-	private report(task: Promise<void>, message: string): void {
+	private report(task: Promise<unknown>, message: string): void {
 		task.catch((error: unknown) => {
 			console.error(message, error);
 			new Notice(message);
@@ -1314,9 +1315,29 @@ export class BoardView extends BasesView {
 	private async toggleCheckbox(entry: BasesEntry, property: BasesPropertyId): Promise<void> {
 		const key = frontmatterKeyOf(property);
 		if (!key) return;
-		await this.writeFrontMatter(entry.file.path, (frontmatter) => {
-			frontmatter[key] = frontmatter[key] !== true;
+		const path = entry.file.path;
+		const wasChecked = await this.setCheckbox(path, key, null);
+		// Completing a task offers a short window to take it back.
+		if (wasChecked === false) {
+			showUndoToast({
+				message: `Completed "${entry.file.basename}"`,
+				onUndo: () =>
+					this.report(
+						this.setCheckbox(path, key, false),
+						"Could not undo the completion.",
+					),
+			});
+		}
+	}
+
+	/** Writes the checkbox (`null` flips it) and resolves with the value it had before. */
+	private async setCheckbox(path: string, key: string, next: boolean | null): Promise<boolean> {
+		let before = false;
+		await this.writeFrontMatter(path, (frontmatter) => {
+			before = frontmatter[key] === true;
+			frontmatter[key] = next ?? !before;
 		});
+		return before;
 	}
 
 	/**
