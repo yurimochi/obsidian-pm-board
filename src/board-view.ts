@@ -1128,7 +1128,14 @@ export class BoardView extends BasesView {
 			if (Platform.isMobile) {
 				new TaskDetailSheet(this.app, file, config, onDismiss, this.taskDates()).open();
 			} else {
-				new TaskDetailModal(this.app, file, config, onDismiss, this.taskDates()).open();
+				new TaskDetailModal(
+					this.app,
+					file,
+					config,
+					onDismiss,
+					this.taskDates(),
+					untouchedContent !== undefined,
+				).open();
 			}
 			return;
 		}

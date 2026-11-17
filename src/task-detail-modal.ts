@@ -33,6 +33,7 @@ export class TaskDetailModal extends Modal {
 	private titleField!: TitleField;
 	private descriptionEl!: HTMLTextAreaElement;
 	private originalTitle = "";
+	private initialTitle = "";
 	private originalDescription = "";
 	private readonly pills = new Map<PickerName, Pill>();
 	/** The one picker currently open, if any. */
@@ -52,6 +53,8 @@ export class TaskDetailModal extends Modal {
 		private readonly onDismiss?: () => void,
 		/** Dates (YYYY-MM-DD) holding a task on the board, dotted in the calendar. */
 		private readonly taskDates: Set<string> = new Set(),
+		/** A just-created card: the title is focused and selected, ready to be typed over. */
+		private readonly focusTitle = false,
 	) {
 		super(app);
 		this.props = new TaskProperties(app, file, config);
@@ -62,11 +65,15 @@ export class TaskDetailModal extends Modal {
 		this.contentEl.empty();
 		this.originalDescription = await this.props.load();
 		this.originalTitle = this.file.basename;
+		this.initialTitle = this.originalTitle;
 
 		this.renderCloseButton();
 		this.renderTitle();
 		this.renderDescription();
 		this.renderToolbar();
+		if (this.focusTitle) {
+			this.titleInputEl.focus();
+		}
 
 		const doc = this.modalEl.doc;
 		doc.addEventListener("pointerdown", this.onPointerDown, true);
@@ -116,9 +123,20 @@ export class TaskDetailModal extends Modal {
 		closeEl.addEventListener("click", () => this.close());
 	}
 
+	/**
+	 * What the title field shows for the note's current name. A just-created
+	 * card still carrying its throwaway name shows an empty field (the
+	 * placeholder reads "Task name") instead of that name.
+	 */
+	private shownTitle(): string {
+		return this.focusTitle && this.originalTitle === this.initialTitle
+			? ""
+			: this.originalTitle;
+	}
+
 	private renderTitle(): void {
 		this.titleField = renderTitleField(this.contentEl, {
-			value: this.originalTitle,
+			value: this.shownTitle(),
 			placeholder: "Task name",
 			sources: {
 				...(this.props.hasProject ? { "#": () => this.props.knownProjects() } : {}),
@@ -132,7 +150,7 @@ export class TaskDetailModal extends Modal {
 				this.titleInputEl.blur();
 			} else if (event.key === "Escape") {
 				event.preventDefault();
-				this.titleInputEl.value = this.originalTitle;
+				this.titleInputEl.value = this.shownTitle();
 				this.titleField.refresh();
 				this.titleInputEl.blur();
 			}
@@ -160,7 +178,7 @@ export class TaskDetailModal extends Modal {
 		}
 
 		if (!title || title === this.originalTitle) {
-			this.titleInputEl.value = this.originalTitle;
+			this.titleInputEl.value = this.shownTitle();
 			this.titleField.refresh();
 			return;
 		}
@@ -171,7 +189,7 @@ export class TaskDetailModal extends Modal {
 		} catch (error) {
 			console.error("PM-Board: could not rename the card.", error);
 			new Notice("Could not rename the card.");
-			this.titleInputEl.value = this.originalTitle;
+			this.titleInputEl.value = this.shownTitle();
 		}
 		this.titleField.refresh();
 	}
