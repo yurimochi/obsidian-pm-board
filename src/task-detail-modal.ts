@@ -8,6 +8,8 @@ import {
 	renderTagPicker,
 } from "./task-detail-pickers";
 import { TaskProperties } from "./task-properties";
+import { renderTitleField, TitleField } from "./title-field";
+import { extractReferences, resolveName, TriggerChar } from "./title-tokens";
 
 type PickerName = "project" | "date" | "tags" | "priority";
 
@@ -28,6 +30,7 @@ interface Pill {
 export class TaskDetailModal extends Modal {
 	private readonly props: TaskProperties;
 	private titleInputEl!: HTMLInputElement;
+	private titleField!: TitleField;
 	private descriptionEl!: HTMLTextAreaElement;
 	private originalTitle = "";
 	private originalDescription = "";
@@ -114,9 +117,15 @@ export class TaskDetailModal extends Modal {
 	}
 
 	private renderTitle(): void {
-		this.titleInputEl = this.contentEl.createEl("input", { cls: "pmb-td-title", type: "text" });
-		this.titleInputEl.value = this.originalTitle;
-		this.titleInputEl.placeholder = "Task name";
+		this.titleField = renderTitleField(this.contentEl, {
+			value: this.originalTitle,
+			placeholder: "Task name",
+			sources: {
+				...(this.props.hasProject ? { "#": () => this.props.knownProjects() } : {}),
+				"@": () => this.props.knownTags(),
+			},
+		});
+		this.titleInputEl = this.titleField.inputEl;
 		this.titleInputEl.addEventListener("keydown", (event: KeyboardEvent) => {
 			if (event.key === "Enter") {
 				event.preventDefault();
@@ -124,26 +133,47 @@ export class TaskDetailModal extends Modal {
 			} else if (event.key === "Escape") {
 				event.preventDefault();
 				this.titleInputEl.value = this.originalTitle;
+				this.titleField.refresh();
 				this.titleInputEl.blur();
 			}
 		});
 		this.titleInputEl.addEventListener("blur", () => void this.commitTitle());
 	}
 
+	/**
+	 * Saves the title field. `#project` and `@tag` references in it set the
+	 * task's project and tags and are removed from the title; what is left
+	 * renames the note.
+	 */
 	private async commitTitle(): Promise<void> {
-		const next = this.titleInputEl.value.trim();
-		if (!next || next === this.originalTitle) {
+		const triggers: TriggerChar[] = this.props.hasProject ? ["#", "@"] : ["@"];
+		const { title, project, tags } = extractReferences(this.titleInputEl.value, triggers);
+
+		if (project) {
+			await this.props.setProject(resolveName(project, this.props.knownProjects()));
+			this.renderPill("project");
+		}
+		if (tags.length > 0) {
+			const known = this.props.knownTags();
+			await this.props.addTags(tags.map((tag) => resolveName(tag, known)));
+			this.renderPill("tags");
+		}
+
+		if (!title || title === this.originalTitle) {
 			this.titleInputEl.value = this.originalTitle;
+			this.titleField.refresh();
 			return;
 		}
 		try {
-			await this.props.renameTo(next);
-			this.originalTitle = next;
+			await this.props.renameTo(title);
+			this.originalTitle = title;
+			this.titleInputEl.value = title;
 		} catch (error) {
 			console.error("PM-Board: could not rename the card.", error);
 			new Notice("Could not rename the card.");
 			this.titleInputEl.value = this.originalTitle;
 		}
+		this.titleField.refresh();
 	}
 
 	private renderDescription(): void {

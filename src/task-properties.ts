@@ -209,6 +209,21 @@ export class TaskProperties {
 		this.frontmatter.tags = next;
 	}
 
+	/** Adds each tag the note doesn't have yet, in one write. */
+	async addTags(tags: string[]): Promise<void> {
+		const current = parseTagList(this.frontmatter.tags);
+		const next = [...current];
+		for (const tag of tags) {
+			const name = normaliseTagName(tag).replace(/\s+/g, "-");
+			if (name && !next.includes(name)) next.push(name);
+		}
+		if (next.length === current.length) return;
+		await this.write((frontmatter) => {
+			frontmatter.tags = next;
+		});
+		this.frontmatter.tags = next;
+	}
+
 	/** Renames the file to `next`, keeping it in the same folder. */
 	async renameTo(next: string): Promise<void> {
 		const folder = this.file.parent?.path ?? "";
