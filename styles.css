@@ -2329,3 +2329,40 @@
 	border: 1.5px solid var(--pmb-menu-dot);
 	border-radius: 50%;
 }
+
+/* Undo toast shown after completing a task, bottom-left of the window. */
+.pmb-undo-toast {
+	position: fixed;
+	left: var(--size-4-4);
+	bottom: var(--size-4-4);
+	z-index: var(--layer-notice);
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-3);
+	padding: var(--size-4-2) var(--size-4-3);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	box-shadow: var(--shadow-s);
+	font-size: var(--font-ui-small);
+	max-width: min(360px, calc(100vw - var(--size-4-8)));
+}
+
+.pmb-undo-message {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pmb-undo-button {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	flex-shrink: 0;
+}
+
+.pmb-undo-count {
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}

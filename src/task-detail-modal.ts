@@ -35,6 +35,8 @@ export class TaskDetailModal extends Modal {
 	private originalTitle = "";
 	private initialTitle = "";
 	private originalDescription = "";
+	/** The latest title save, so closing can wait for it. */
+	private pendingCommit: Promise<void> = Promise.resolve();
 	private readonly pills = new Map<PickerName, Pill>();
 	/** The one picker currently open, if any. */
 	private openPicker: { name: PickerName; popoverEl: HTMLElement } | null = null;
@@ -155,7 +157,9 @@ export class TaskDetailModal extends Modal {
 				this.titleInputEl.blur();
 			}
 		});
-		this.titleInputEl.addEventListener("blur", () => void this.commitTitle());
+		this.titleInputEl.addEventListener("blur", () => {
+			this.pendingCommit = this.commitTitle();
+		});
 	}
 
 	/**
